@@ -48,7 +48,7 @@ enum {
     SHTERM_MAX
 };
 
-/* イベント */
+/* event */
 typedef enum {
     SHBATTLOG_EVENT_NONE,
 

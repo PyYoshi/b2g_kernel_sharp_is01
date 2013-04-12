@@ -1891,7 +1891,7 @@ void tcp_v4_nuke_addr(__u32 saddr)
 				break;
 			}
 
-/* SHARP_EXTEND Bug9725 2010.06.05 MOD Start */
+/* SHARP_EXTEND Start */
 /*			spin_unlock_bh(lock); */
 /*			tcp_done(found); */
 /*			if (found == NULL) */
@@ -1903,7 +1903,7 @@ void tcp_v4_nuke_addr(__u32 saddr)
 			if (found == NULL) {
 				break;
 			}
-/* SHARP_EXTEND Bug9725 2010.06.05 MOD End */
+/* SHARP_EXTEND End */
 
 		}
 	}

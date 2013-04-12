@@ -1,6 +1,6 @@
 /* ******************************************************************************** */
 /*																					*/
-/*	TunerDev.c	Tuner Control device													*/
+/*	TunerDev.c	TunerControlDevice													*/
 /*																					*/
 /*																					*/
 /*																					*/
@@ -12,6 +12,7 @@
 #include <linux/poll.h>
 #include <linux/smp_lock.h>
 #include <mach/vreg.h>
+#include <asm/uaccess.h> /* for access_ok() */
 
 #include "gpio_def.h"
 
@@ -27,12 +28,10 @@ static int tuner_vreg_enable(void);
 static int tuner_vreg_disable(void);
 
 static stGPIO_DEF use_gpiono[] = {
-	
 	{GPIO_PWRDWN_PORTNO   , DirctionOut, 1, 0},
 	{GPIO_GTDION_PORTNO   , DirctionOut, 0, 0},
 	{GPIO_LDO_PORTNO      , DirctionOut, 0, 0}
 };
-
 
 
 static int tuner_open(struct inode *inode, struct file *file)
@@ -41,13 +40,12 @@ static int tuner_open(struct inode *inode, struct file *file)
 
 	ret  = gpio_init();
 	if (ret == 1) {
-		
+		/* Failed */
 		printk("%s:%d !!!tuner_open gpio_init() error \n", __FILE__, __LINE__);
 		return (-1);
 	}
 	return (0);
 }
-
 
 static int tuner_release(struct inode *inode, struct file *file)
 {
@@ -59,6 +57,8 @@ static long tuner_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int ret;
 	ioctl_cmd 		  *io_cmd = (ioctl_cmd *)arg;
 	
+	if (!access_ok(VERIFY_WRITE, io_cmd, sizeof(ioctl_cmd))) return -EINVAL;
+
 	switch ( cmd ) {
 	case IOC_GPIO_VAL_SET:
 		ret = gpio_set(io_cmd->no, io_cmd->val);
@@ -143,9 +143,7 @@ static int gpio_init(void)
 	
 	for (i=0; i<loop; i++, p++) {
 		if (p->direction == DirctionIn) {
-			
 			if (gpio_direction_input(p->no) < 0) {
-				
 				errcnt ++;
 				printk( "%s:%d gpio_direction_input error NO.%d \n", __FILE__,__LINE__, p->no);
 				continue;
@@ -154,9 +152,7 @@ static int gpio_init(void)
 			continue;
 		}
 		if (p->direction == DirctionOut) {
-			
 			if (gpio_direction_output(p->no, p->out_val) < 0) {
-				
 				errcnt ++;
 				printk("%s: gpio_direction_output error NO.%d \n", __FILE__, p->no);
 				continue;
@@ -180,7 +176,6 @@ static int gpio_set(unsigned int no, int value)
 	int flag = 0;
 	int i;
 	
-	
 	for(i=0; i<loop; i++, p++){
 		if (p->no == no){
 			flag = 1;
@@ -188,7 +183,6 @@ static int gpio_set(unsigned int no, int value)
 		}
 	}
 	if (flag == 0) {
-		
 		printk("%s: !!! gpio_set() error No.%d value %d \n", __FILE__, no, value);
 		return EINVAL;
 	}
@@ -205,7 +199,6 @@ static int gpio_get(unsigned int no, int *val)
 	
 	*val = 0;
 
-	
 	for(i=0; i<loop; i++, p++){
 		if (p->no == no){
 			flag = 1;
@@ -213,7 +206,6 @@ static int gpio_get(unsigned int no, int *val)
 		}
 	}
 	if (flag == 0) {
-		
 		printk("%s: !!! gpio_get() No.%d error \n", __FILE__, no);
 		return EINVAL;
 	}

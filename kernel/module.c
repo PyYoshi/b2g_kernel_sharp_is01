@@ -51,6 +51,10 @@
 #include <linux/tracepoint.h>
 #include <linux/ftrace.h>
 #include <linux/async.h>
+#ifdef CONFIG_SECURITY_DECKARD
+#include <linux/crypto.h>
+#include <linux/scatterlist.h>
+#endif
 
 #if 0
 #define DEBUGP printk
@@ -1859,6 +1863,9 @@ static void *module_alloc_update_bounds(unsigned long size)
 	return ret;
 }
 
+#ifdef CONFIG_SECURITY_DECKARD
+#define CORRECT_WIFI_MODULE_HASH "\x01\xf4\xb7\x3c\xd6\x43\xee\x4d\x8f\x6f\x30\xaf\xdc\x1e\xf8\x48\x2a\x2c\xd5\x6f\xdb\x46\x4e\x59\x93\xa8\x1b\x95\x9d\x61\xed\x31"
+#endif
 /* Allocate and load the module: note that size of section 0 is always
    zero, and we rely on this for optional sections. */
 static noinline struct module *load_module(void __user *umod,
@@ -1880,6 +1887,16 @@ static noinline struct module *load_module(void __user *umod,
 	void *percpu = NULL, *ptr = NULL; /* Stops spurious gcc warning */
 	unsigned long *mseg;
 	mm_segment_t old_fs;
+#ifdef CONFIG_SECURITY_DECKARD
+	struct crypto_hash* hash = NULL;
+	struct hash_desc desc;
+	unsigned char digest[64];
+	int err_o = 0;
+	int n_bytes_read = 0;
+	int n_amount_bytes_read = 0;
+
+	memset(digest, 0, 64);
+#endif
 
 	DEBUGP("load_module: umod=%p, len=%lu, uargs=%p\n",
 	       umod, len, uargs);
@@ -1902,6 +1919,63 @@ static noinline struct module *load_module(void __user *umod,
 		goto free_hdr;
 	}
 
+#ifdef CONFIG_SECURITY_DECKARD
+	do
+	{
+		hash = crypto_alloc_hash("sha256", 0, CRYPTO_ALG_ASYNC);
+
+		if(IS_ERR(hash))
+		{
+			printk(KERN_WARNING "cannot alloc hash\n");
+
+			err_o = 1;
+			break;
+		}
+
+		desc.tfm = hash;
+		desc.flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+
+		crypto_hash_init(&desc);
+
+		for(n_amount_bytes_read = 0; n_amount_bytes_read < len; n_amount_bytes_read += 1024)
+		{
+			struct scatterlist sg;
+
+			if(n_amount_bytes_read + 1024 <= len)
+			{
+				n_bytes_read = 1024;
+			}
+			else
+			{
+				n_bytes_read = len - n_amount_bytes_read;
+			}
+
+			sg_init_one(&sg, (void*)((unsigned char*)hdr + n_amount_bytes_read), n_bytes_read);
+			
+			crypto_hash_update(&desc, &sg, n_bytes_read);
+		}
+
+		crypto_hash_final(&desc, digest);
+
+		crypto_free_hash(desc.tfm);
+
+		if(memcmp(digest, CORRECT_WIFI_MODULE_HASH, 32))
+		{
+			printk(KERN_WARNING "incorrect hash\n");
+
+			err_o = 1;
+			break;
+		}
+	}
+	while(0);
+
+	if(err_o == 1)
+	{
+		printk(KERN_WARNING "error occuered\n");
+		err = -ENOEXEC;
+		goto free_hdr;
+	}
+#endif
 	/* Sanity checks against insmoding binaries or wrong arch,
            weird elf version */
 	if (memcmp(hdr->e_ident, ELFMAG, SELFMAG) != 0

@@ -124,12 +124,12 @@
 
 /* Parity configuration */
 #define NO_PARITY 0x0
-//Customize for Bluetooth
+/* Customize for Bluetooth [005] */
 //#define EVEN_PARITY 0x1
 //#define ODD_PARITY 0x2
 #define ODD_PARITY 0x1
 #define EVEN_PARITY 0x2
-//Customize for Bluetooth
+/* Customize for Bluetooth [005] */
 #define SPACE_PARITY 0x3
 
 #define UARTDM_IPR_STALE_TIMEOUT_MSB_BMSK 0xffffff80

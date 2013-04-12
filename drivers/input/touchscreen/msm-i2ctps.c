@@ -12,13 +12,13 @@
  *
  */
 
-#define	TPS_ROTATE_180			/* 座標の180度回転 */
-#define	TPS_PRNERR				/* ログ出力(エラーログ) */
-/* #define	TPS_PRNLOG */				/* ログ出力(通常ログ) */
-/* #define	TPS_PRNDEB */				/* ログ出力(デバッグログ) */
+#define	TPS_ROTATE_180
+#define	TPS_PRNERR				/* Log output(Error log) */
+/* #define	TPS_PRNLOG */				/* Log output(Log usually) */
+/* #define	TPS_PRNDEB */				/* Log output(Debug log) */
 
 /*+-------------------------------------------------------------------------+*/
-/*|	インクルードファイル													|*/
+/*|	INCLUDE FILE															|*/
 /*+-------------------------------------------------------------------------+*/
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
@@ -37,7 +37,7 @@
 #include <mach/msm_i2ctps_fw.h>
 
 /*+-------------------------------------------------------------------------+*/
-/*|	定数宣言																|*/
+/*|	DEFINE																	|*/
 /*+-------------------------------------------------------------------------+*/
 
 #define	TPS_I2C_RETRY			10
@@ -45,7 +45,7 @@
 #define	KPD_KEYPRESS			1
 #define	KPD_KEYRELEASE			0
 
-/* コマンド */
+/* Command */
 enum
 {
 	QPHYSLEN			= 128,
@@ -77,13 +77,13 @@ typedef enum
 
 #define	TPS_ERROR_VALUE		0xfff
 
-/* 広範囲・３点押しエラー時に通知する値 */
+/* Error parameter */
 #define TPS_ERROR_POS_X		240
 #define	TPS_ERROR_POS_Y		480
-#define	TPS_ERROR_WIDE		SH_TOUCH_MAX_DISTANCE	/* 広範囲 */
-#define	TPS_ERROR_3DOWN		SH_TOUCH_MAX_DISTANCE	/* ３点押し */
+#define	TPS_ERROR_WIDE		SH_TOUCH_MAX_DISTANCE	/* Wide range */
+#define	TPS_ERROR_3DOWN		SH_TOUCH_MAX_DISTANCE	/* Three point pushing */
 
-/* 調整パラメータ */
+/* Adjustable parameter */
 #define	POS_X0				0
 #define	POS_X1				120
 #define	POS_X2				360
@@ -95,8 +95,8 @@ typedef enum
 #define	POS_Y4				960
 #define	POS_LIMIT			100
 
-#define	ADJUST_POINT		6					/* 補正ポイント数 */
-#define	AREA_COUNT			(ADJUST_POINT*2)	/* 補正エリア数 */
+#define	ADJUST_POINT		6				
+#define	AREA_COUNT			(ADJUST_POINT*2)
 #define DOUBLE_ACCURACY		10000
 
 #define	TPS_DISABLE_FLIP	0x01
@@ -113,7 +113,7 @@ typedef enum
 #define	TPS_RETURN_OFF		0x00
 
 /*+-------------------------------------------------------------------------+*/
-/*|	型宣言																	|*/
+/*|	TYPEDEF																	|*/
 /*+-------------------------------------------------------------------------+*/
 typedef struct i2ctps_record	I2cTpsRec;
 typedef struct i2c_client		I2cClient;
@@ -131,17 +131,17 @@ struct i2ctps_record
 	int		mnIrqPin;
 	int		(*mpfPinSetupFunc)(void);
 	void	(*mpfPinShutdownFunc)(void);
-	uint8_t	mbIsActive;					/* ドライバステータス(1:動作中/0:停止中) */
+	uint8_t	mbIsActive;					/* Driver status(1:Active/0:Stopping) */
 	struct delayed_work moCmdQ;
 	WorkStruct moIrqWork;
 	int		mnHsspClkPin;
 	int		mnHsspDataPin;
 	TpsState mnState;
-	uint8_t	mbIsEnable;					/* ステータス(1:動作中/0:停止中) */
-	uint8_t	mbIsTestMode;				/* TestModeステータス(1:テストモード/0:通常モード) */
-	uint8_t	mbAdjustEnable;				/* 補正(1:有効 0:無効) */
-	uint8_t	mbAccessState;				/* アクセス状態 */
-	uint8_t	mbIsFirst;					/* 初回起動時 */
+	uint8_t	mbIsEnable;					/* status(1:Active/0:Stopping) */
+	uint8_t	mbIsTestMode;				/* TestModestatus(1:Testmode/0:Usually) */
+	uint8_t	mbAdjustEnable;				/* Correction(1:Effective 0:Invalidity) */
+	uint8_t	mbAccessState;				/* Access state */
+	uint8_t	mbIsFirst;					/* Starts first time */
 };
 
 typedef struct
@@ -152,10 +152,10 @@ typedef struct
 
 typedef struct
 {
-	TpsPoint_t p;		/* 左上 */
-	TpsPoint_t q;		/* 右上 */
-	TpsPoint_t r;		/* 左下 */
-	TpsPoint_t s;		/* 右下 */
+	TpsPoint_t p;		/* Upper left */
+	TpsPoint_t q;		/* Upper right */
+	TpsPoint_t r;		/* Lower left */
+	TpsPoint_t s;		/* Lower right */
 } TpsArea_t;
 
 typedef struct
@@ -164,11 +164,11 @@ typedef struct
 	short mNo;
 } Qsort_t;
 
-/* ディスパッチテーブル定義型 */
+/* Dispatch table definition type */
 typedef struct
 {
-	uint8_t mbValid;;							/* 0なら無効 */
-												/* イベント処理関数 */
+	uint8_t mbValid;;
+												/* Event processing function */
 	void (*mpReportKey)(InputDev *);
 	void (*mpReportWit)(InputDev *, uint16_t, uint16_t);
 	void (*mpReportPos)(InputDev *, uint16_t, uint16_t);
@@ -178,20 +178,20 @@ typedef struct
 static struct semaphore sem;
 
 /*+-------------------------------------------------------------------------+*/
-/*|	広域変数の定義															|*/
+/*|	GLOBAL VARIABLE															|*/
 /*+-------------------------------------------------------------------------+*/
 static uint8_t gbSetParam[7] = 
 	/*	0x09  0x0A  0x0B  0x0C  0x0D  0x0E  0x0F	*/
 	{	0xFF, 0xFF, 0x00, 0xFF, 0x05, 0xFF, 0x05	};
 
-/* 補正基準となる６点の座標 */
+/* Standard coordinates */
 static const TpsPoint_t gBasePt[ADJUST_POINT] =
 		{
 			{POS_X1, POS_Y1}, {POS_X2, POS_Y1},
 			{POS_X1, POS_Y2}, {POS_X2, POS_Y2},
 			{POS_X1, POS_Y3}, {POS_X2, POS_Y3},
 		};
-/* 補正分割エリアの座標 */
+/* Coordinates of correction area */
 static const TpsArea_t gAreaRect[AREA_COUNT] =
 		{
 			{{POS_X0, POS_Y0}, {POS_X1, POS_Y0}, {POS_X0, POS_Y1}, {POS_X1, POS_Y1}},
@@ -215,9 +215,9 @@ static uint8_t gSense[168];
 static int gnResult = 0;
 
 /*+-------------------------------------------------------------------------+*/
-/*|	プロトタイプ宣言														|*/
+/*|	PROTO TYPE DECLARE														|*/
 /*+-------------------------------------------------------------------------+*/
-/* I2Cアクセス */
+/* I2C Access */
 static int ShTps_I2cRead(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, uint32_t dwLen);
 static int ShTps_I2cWriteOne(I2cClient *poClient, uint8_t bRegAdr, uint8_t bData);
 static int ShTps_I2cWrite(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, uint32_t dwLen);
@@ -258,7 +258,7 @@ static int ShTps_WriteFirmParam(I2cClient *poClient);
 static int ShTps_TestMode_Start(I2cTpsRec *poTpsRec, uint8_t bMode);
 static int ShTps_TestMode_Stop(I2cTpsRec *poTpsRec);
 static int ShTps_ParamSetting(I2cTpsRec *poTpsRec, uint8_t *pParam);
-/* 座標補正 */
+/* Coordinates correction */
 static void ShTps_Qsort(Qsort_t *pTable, int nTop, int nEnd);
 static void ShTps_RoundValue(short *pValue);
 static int ShTps_SetAdjustParam(I2cTpsRec *poTpsRec, uint16_t *pParam);
@@ -277,7 +277,7 @@ static int ShTps_FwWriteMain(TpsFwData *pTpsFirmData);
 static DEFINE_MUTEX(goTpsAccessMutex);
 
 /*+-----------------------------------------------------------------------------+*/
-/*|	マクロ定義																	|*/
+/*|	MACRO DECLARE																|*/
 /*+-----------------------------------------------------------------------------+*/
 #define	MINMAX(min,max,val)	((min)>(val) ? (min) : ((max)<(val) ? (max) : (val)))
 #define	SET_POINT(val,x1,y1)	val.x=(x1);val.y=(y1)
@@ -330,10 +330,10 @@ static const TpsDispatch gTpsDispatch[TPS_STATE_MAX][TPS_STATE_MAX] =
 };
 
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cアクセス																|*/
+/*|	I2C ACCESS																|*/
 /*+-------------------------------------------------------------------------+*/
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cリード																|*/
+/*|	I2C READ																|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShTps_I2cRead(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, uint32_t dwLen)
 {
@@ -372,7 +372,7 @@ static int ShTps_I2cRead(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, u
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cライト																|*/
+/*|	I2C WRITE																|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShTps_I2cWriteOne(I2cClient *poClient, uint8_t bRegAdr, uint8_t bData)
 {
@@ -555,7 +555,7 @@ module_init(TpsIf_Setup);
 module_exit(TpsIf_Cleanup);
 
 /*+-------------------------------------------------------------------------+*/
-/*|	タッチパネルドライバ													|*/
+/*|	Touch panel driver														|*/
 /*+-------------------------------------------------------------------------+*/
 module_init(ShTps_Init);
 module_exit(ShTps_Exit);
@@ -572,7 +572,7 @@ static const I2cDevID gI2cDevIdTableTps[] =
 
 MODULE_DEVICE_TABLE(i2c, gI2cDevIdTableTps);
 
-/* I2Cドライバ呼び出し用構造体 */
+/* I2C driver call structure */
 static struct i2c_driver goI2cTpsDriver =
 {
 	.driver =
@@ -590,7 +590,7 @@ static int __init ShTps_Init(void)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Init(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
-	/* I2Cドライバ利用開始 */
+	/* I2C driver Use beginning */
 	return i2c_add_driver(&goI2cTpsDriver);
 }
 
@@ -599,7 +599,7 @@ static void __exit ShTps_Exit(void)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Exit(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
-	/* I2Cドライバ利用終了 */
+	/* I2C driver Use end */
 	i2c_del_driver(&goI2cTpsDriver);
 }
 
@@ -611,44 +611,44 @@ static int ShTps_Command(I2cClient *poClient, unsigned int wCmd, void *pArg)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Command(PID:%ld,CMD:%d,ARG:%lx)\n", sys_getpid(), wCmd, (long)pArg);
 #endif	/* TPS_PRNLOG */
-	/* デバイス非動作でも実行できるIOCTL */
+	/* It is possible to execute it even by the device non-operation IOCTL */
 	switch(wCmd)
 	{
 	case TPSDEV_FW_VERSION:
 		return ShTps_GetFwVer(poTpsRec);
 	case TPSDEV_FW_DOWNLOAD:
-		/* ファームウェアアップデート実行 */
+		/* Firmware update execution */
 		return ShTps_FwWrite(poTpsRec, (TpsFwData*)gFirmData);
 	case TPSDEV_FW_UPDATE:
-		/* ファームウェアアップデート実行 */
+		/* Firmware update execution */
 		return ShTps_FwWrite(poTpsRec, (TpsFwData*)pArg);
 	}
-	/* デバイスがオープンされていないなら */
+	/* If the device has not been opened */
 	if(poTpsRec->mbIsActive == 0)
 		return -2;
 	switch(wCmd)
 	{
 	case TPSDEV_ENABLE:
-		/* タッチパネルを動作状態にする */
+		/* It is a state of operation as for the touch panel */
 		return ShTps_SetState(poTpsRec, TPS_DISABLE_API, TPS_DISABLE_OFF, TPS_CHECK_ON, TPS_RETURN_ON);
 	case TPSDEV_DISABLE:
-		/* タッチパネルを待機状態にする */
+		/* The touch panel is made a stand-by state.  */
 		return ShTps_SetState(poTpsRec, TPS_DISABLE_API, TPS_DISABLE_ON, TPS_CHECK_ON, TPS_RETURN_ON);
 	case TPSDEV_START_TESTMODE:
-		/* テストモードを開始する */
+		/* Test mode beginning */
 		return ShTps_TestMode_Start(poTpsRec, 0x01);
 	case TPSDEV_START_TESTMODE2:
-		/* テストモードを開始する(モード２) */
+		/* Test mode beginning(Mode2) */
 		return ShTps_TestMode_Start(poTpsRec, 0x11);
 	case TPSDEV_STOP_TESTMODE:
-		/* テストモードを終了する */
+		/* Test mode end */
 		return ShTps_TestMode_Stop(poTpsRec);
 	case TPSDEV_GET_SENSOR:
 		nResult = -2;
 		if(poTpsRec->mbIsTestMode)
 		{
 			nResult = 0;
-			/* センサ値取得データをユーザー空間にコピーする */
+			/* The sensor value acquisition data is copied.  */
 			if(copy_to_user((uint8_t*)pArg, &gSense, 168))
 			{
 #ifdef TPS_PRNERR
@@ -684,7 +684,7 @@ printk(KERN_DEBUG "[ShTps]Probe(PID:%ld)\n", sys_getpid());
 		dev_err(&poClient->dev, "platform device data is required\n");
 		return -ENODEV;
 	}
-	/* タッチパネルドライバ情報用メモリを確保する */
+	/* Memory securing */
 	poTpsRec = kzalloc(sizeof(I2cTpsRec), GFP_KERNEL);
 	if(!poTpsRec)
 	{
@@ -695,7 +695,7 @@ printk(KERN_DEBUG "[ShTps]Probe(PID:%ld)\n", sys_getpid());
 	i2c_set_clientdata(poClient, poTpsRec);
 	poTpsRec->mpoClient			 = poClient;
 	poSetupData					 = poClient->dev.platform_data;
-	/* セットアップ情報を得る(board-xxxx.cで定義している) */
+	/* Get setup info(board-xxxx.c) */
 	poTpsRec->mnIrqPin			 = poSetupData->gpio_irq;
 	poTpsRec->mnHsspClkPin		 = poSetupData->gpio_hssp_clk;
 	poTpsRec->mnHsspDataPin		 = poSetupData->gpio_hssp_data;
@@ -705,10 +705,10 @@ printk(KERN_DEBUG "[ShTps]Probe(PID:%ld)\n", sys_getpid());
 	poTpsRec->mbAccessState		 = 0;
 	poTpsRec->mbIsActive		 = 0;
 
-	/* セマフォ初期化 */
+	/* Semaphore initialization */
 	init_MUTEX(&sem);
 
-	/* GPIO設定を行う */
+	/* GPIO setting */
 	if(0 == (nResult = ShTps_ConfigGPIO(poTpsRec)))
 	{
 		INIT_WORK(&poTpsRec->moIrqWork, ShTps_FetchInt);
@@ -720,7 +720,7 @@ printk(KERN_DEBUG "[ShTps]Probe(PID:%ld)\n", sys_getpid());
 		device_init_wakeup(&poClient->dev, 1);
 		return 0;
 	}
-	/* GPIOの解放 */
+	/* GPIO liberating */
 	ShTps_ReleaseGPIO(poTpsRec);
 	kfree(poTpsRec);
 	return nResult;
@@ -785,7 +785,7 @@ printk(KERN_DEBUG "[ShTps]CreateInputDev(PID:%ld)\n", sys_getpid());
 		pInDev->id.version = QCVERSION_ID;
 		pInDev->open = ShTps_OpenCB;
 		pInDev->close = ShTps_CloseCB;
-		/* 有効なイベントを登録 */
+		/* An effective event is registered  */
 		__set_bit(EV_KEY, pInDev->evbit);
 		__set_bit(EV_ABS, pInDev->evbit);
 		__set_bit(ABS_X, pInDev->absbit);
@@ -793,7 +793,7 @@ printk(KERN_DEBUG "[ShTps]CreateInputDev(PID:%ld)\n", sys_getpid());
 		__set_bit(ABS_TOOL_WIDTH, pInDev->absbit);
 		__set_bit(BTN_TOUCH, pInDev->keybit);
 		input_set_drvdata(pInDev, poTpsRec);
-		/* イベントパラメータ範囲を設定 */
+		/* Event parameter range set */
 		input_set_abs_params(pInDev, ABS_X, 0, SH_TOUCH_MAX_X, 0, 0);
 		input_set_abs_params(pInDev, ABS_Y, 0, SH_TOUCH_MAX_Y, 0, 0);
 		input_set_abs_params(pInDev, ABS_TOOL_WIDTH, 0, SH_TOUCH_MAX_DISTANCE, 0, 0);
@@ -816,7 +816,7 @@ static int ShTps_ReleaseGPIO(I2cTpsRec *poTpsRec)
 {
 	if(poTpsRec == NULL)
 		return -EINVAL;
-	/* GPIOの解放 */
+	/* GPIO liberating */
 	dev_info(&poTpsRec->mpoClient->dev, "releasing gpio pins %d,%d,%d\n",
 			 poTpsRec->mnIrqPin, poTpsRec->mnHsspClkPin, poTpsRec->mnHsspDataPin);
 	poTpsRec->mpfPinShutdownFunc();
@@ -828,7 +828,7 @@ static void ShTps_SHLCDCPower(int nOnOff)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]SHLCDCPower(PID:%ld,OnOff:%d)\n", sys_getpid(), nOnOff);
 #endif	/* TPS_PRNDEB */
-	/* nOnOff = 0 ならオフ */
+	/* nOnOff = 0  OFF */
 	if(nOnOff == 0) {
 		shlcdc_api_set_power_mode(SHLCDC_DEV_TYPE_TP, SHLCDC_DEV_PWR_OFF);
 	} else {
@@ -837,7 +837,7 @@ printk(KERN_DEBUG "[ShTps]SHLCDCPower(PID:%ld,OnOff:%d)\n", sys_getpid(), nOnOff
 }
 static void ShTps_Reset(int nOnOff)
 {
-	/* nOnOff = 0 ならオフ */
+	/* nOnOff = 0  OFF */
 	if(nOnOff == 0) {
 		shlcdc_api_tp_set_psoc_reset_mode(SHLCDC_TP_PSOC_RESET_LO);	/* PSOC_RESET = L */
 	} else {
@@ -847,7 +847,7 @@ static void ShTps_Reset(int nOnOff)
 
 static void ShTps_Standby(int nOnOff)
 {
-	/* nOnOff = 0 ならオフ */
+	/* nOnOff = 0  OFF */
 	if(nOnOff == 0) {
 		shlcdc_api_tp_set_psoc_stby_mode(SHLCDC_TP_PSOC_STBY_HI);	/* PSOC_STBY = H */
 	} else {
@@ -857,7 +857,7 @@ static void ShTps_Standby(int nOnOff)
 
 static void ShTps_HsspClk(int nOnOff)
 {
-	/* nOnOff = 0 ならオフ */
+	/* nOnOff = 0  OFF */
 	if(nOnOff == 0) {
 		gpio_direction_output(SH_TOUCH_HSSP_CLK , 0);
 	} else {
@@ -867,7 +867,7 @@ static void ShTps_HsspClk(int nOnOff)
 
 static void ShTps_HsspData(int nOnOff)
 {
-	/* nOnOff = 0 ならオフ */
+	/* nOnOff = 0  OFF */
 	if(nOnOff == 0) {
 		gpio_direction_output(SH_TOUCH_HSSP_DATA, 0);
 	} else {
@@ -880,12 +880,12 @@ static void ShTps_PowerOn(void)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]PowerOn(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNDEB */
-	ShTps_SHLCDCPower(1);		/* SHLCDC PowerON要求 */
+	ShTps_SHLCDCPower(1);		/* SHLCDC PowerON Request */
 	ShTps_Reset(1);
 	udelay(300);
 	ShTps_Reset(0);
 	ShTps_Standby(0);
-	ShTps_SHLCDCPower(0);		/* SHLCDC PowerOFF要求 */
+	ShTps_SHLCDCPower(0);		/* SHLCDC PowerOFF Request */
 	mdelay(300);
 }
 
@@ -894,10 +894,10 @@ static void ShTps_PowerOff(void)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]PowerOff(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNDEB */
-	/* スタンバイにする */
-	ShTps_SHLCDCPower(1);		/* SHLCDC PowerON要求 */
+	/* Standby */
+	ShTps_SHLCDCPower(1);		/* SHLCDC PowerON Request */
 	ShTps_Standby(1);
-	ShTps_SHLCDCPower(0);		/* SHLCDC PowerOFF要求 */
+	ShTps_SHLCDCPower(0);		/* SHLCDC PowerOFF Request */
 }
 
 static int ShTps_OpenCB(InputDev *poInDev)
@@ -928,11 +928,11 @@ static void ShTps_Shutdown(I2cTpsRec *poTpsRec)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Shutdown(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
-	/* 動作中なら */
+	/* If you are operating */
 	if(poTpsRec->mbIsActive)
 	{
 		ShTps_Stop(poTpsRec);
-		/* ワークメモリ解放 */
+		/* Work memory liberating */
 		flush_work(&poTpsRec->moIrqWork);
 	}
 }
@@ -943,15 +943,15 @@ static int ShTps_Start(I2cTpsRec *poTpsRec)
 printk(KERN_DEBUG "[ShTps]Start(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
 	mutex_lock(&goTpsAccessMutex);
-	/* 停止中にする */
+	/* It does while stopping  */
 	poTpsRec->mbIsEnable = 0;
 	poTpsRec->mbAccessState |= TPS_DISABLE_API;
 	poTpsRec->mbIsActive = 1;
-	/* 通常モードにする */
+	/* Usual mode */
 	poTpsRec->mbIsTestMode = 0;
 	poTpsRec->mbAdjustEnable = 0;
 	poTpsRec->mbIsFirst = 0x03;
-	/* 電源オン */
+	/* Power on */
 	if(0 != ShTps_SetState(poTpsRec, TPS_DISABLE_API, TPS_DISABLE_OFF, TPS_CHECK_ON, TPS_RETURN_ON))
 	{
 		poTpsRec->mbIsActive = 0;
@@ -965,7 +965,7 @@ printk(KERN_DEBUG "[ShTps]Start(PID:%ld)\n", sys_getpid());
 static void ShTps_Stop(I2cTpsRec *poTpsRec)
 {
 	mutex_lock(&goTpsAccessMutex);
-	/* 停止中にする */
+	/* It does while stopping  */
 	ShTps_SetState(poTpsRec, TPS_DISABLE_API, TPS_DISABLE_ON, TPS_CHECK_ON, TPS_RETURN_OFF);
 	poTpsRec->mbIsActive = 0;
 	mutex_unlock(&goTpsAccessMutex);
@@ -996,12 +996,12 @@ static void ShTps_FetchInt(WorkStruct *poWork)
 
 //printk(KERN_DEBUG "[ShTps]FetchInt(PID:%ld)\n", sys_getpid());
 	mutex_lock(&goTpsAccessMutex);
-	/* テストモードなら */
+	/* If it is a test mode */
 	if(poTpsRec->mbIsTestMode)
 	{
-		/* センサ値を取得する */
+		/* Get Sensor value */
 		ShTps_I2cRead(poClient, 0x00, gSense, 168);
-		/* 次の割り込み許可 */
+		/* Enabling interrupt */
 		enable_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin));
 		mutex_unlock(&goTpsAccessMutex);
 		return;
@@ -1011,7 +1011,7 @@ static void ShTps_FetchInt(WorkStruct *poWork)
 		mutex_unlock(&goTpsAccessMutex);
 		return;
 	}
-	/* レジスタの読み込み */
+	/* Register Read */
 	if(0 != ShTps_I2cRead(poClient, 0x00, bData, 7))
 	{
 #ifdef TPS_PRNERR
@@ -1031,17 +1031,17 @@ printk(KERN_DEBUG "[ShTps]i2c read error\n");
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Int %02X,(%4d,%4d)(%4d,%4d)\n", bData[ 0], wPosX, wPosY, wDeltaX, wDeltaY);
 #endif	/* TPS_PRNLOG */
-	/* ステート遷移先を得る */
+	/* Get state transition ahead */
 	nNextState = ShTps_GetNextState(bData[ 0]);
-	/* ホバー状態以外で */
+	/* It is not HOVER */
 	if(nNextState != TPS_STATE_HOVER)
 	{
-		/* 多点押しエラー */
+		/* Multipoint pressing error */
 		if(wPosX == 0x0FFF && wPosY == 0x0FFF)
 		{
 			nNextState = TPS_STATE_3DOWN;
 		}
-		/* 広範囲押しエラー */
+		/* Wide-ranging pressing error */
 		else if(wPosX == 0x0DDD && wPosY == 0x0DDD)
 		{
 			nNextState = TPS_STATE_WIDE;
@@ -1062,10 +1062,10 @@ printk(KERN_DEBUG "[ShTps]Int %02X,(%4d,%4d)(%4d,%4d)\n", bData[ 0], wPosX, wPos
 #ifdef TPS_ROTATE_180
 			wPosY   = SH_TOUCH_MAX_Y - wPosY;
 #endif	/* TPS_ROTATE_180 */
-			/* 補正が有効なら */
+			/* The correction is effective */
 			if(poTpsRec->mbAdjustEnable != 0)
 			{
-				/* 座標の６点補正を行う */
+				/* Coordinates are corrected.  */
 				ShTps_AdjustPt(&wPosX, &wPosY);
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]Adjust (%4d,%4d)\n", wPosX, wPosY);
@@ -1073,20 +1073,20 @@ printk(KERN_DEBUG "[ShTps]Adjust (%4d,%4d)\n", wPosX, wPosY);
 			}
 		}
 	}
-	/* 遷移できるなら */
+	/* Can it change? */
 	if(gTpsDispatch[nNextState][poTpsRec->mnState].mbValid != 0)
 	{
-		/* リポート[BTN_TOUCH] */
+		/* Report[BTN_TOUCH] */
 		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey != NULL)
 		{
 			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey(pInDev);
 		}
-		/* リポート[ABS_TOOL_WIDTH] */
+		/* Report[ABS_TOOL_WIDTH] */
 		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportWit != NULL)
 		{
 			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportWit(pInDev, wDeltaX, wDeltaY);
 		}
-		/* リポート[ABS_X][ABS_Y] */
+		/* Report[ABS_X][ABS_Y] */
 		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos != NULL)
 		{
 			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos(pInDev, wPosX, wPosY);
@@ -1103,7 +1103,7 @@ printk(KERN_DEBUG "[ShTps]State[%s]->[%s] OK\n", StaName[poTpsRec->mnState], Sta
 printk(KERN_DEBUG "[ShTps]State[%s]->[%s] NG\n", StaName[poTpsRec->mnState], StaName[nNextState]);
 #endif	/* TPS_PRNDEB */
 	}
-	/* 次の割り込み許可 */
+	/* Enabling interrupt */
 	enable_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin));
 	mutex_unlock(&goTpsAccessMutex);
 }
@@ -1141,7 +1141,7 @@ static int ShTps_GetNextState(uint8_t bState)
 }
 
 /*+-----------------------------------------------------------------------------+*/
-/*| 2点間の距離算出																|*/
+/*| Distance calculation between two points										|*/
 /*+-----------------------------------------------------------------------------+*/
 static uint16_t ShTps_GetHypotLength(uint16_t wX, uint16_t wY)
 {
@@ -1156,7 +1156,7 @@ static uint16_t ShTps_GetHypotLength(uint16_t wX, uint16_t wY)
 	dwY = (uint32_t)wY * (uint32_t)wY;
 	wResult = (uint16_t)int_sqrt(dwX + dwY);
 
-	/* 対角線の最大値を超えていれば */
+	/* SH_TOUCH_MAX_DISTANCE maximum value exaggerated  */
 	if(wResult > SH_TOUCH_MAX_DISTANCE)
 	{
 		wResult = SH_TOUCH_MAX_DISTANCE;
@@ -1171,7 +1171,7 @@ static int ShTps_DelayEnable(void *poPt)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]ShTps_DelayEnable(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
-	/* パワーオン処理 */
+	/* Power on sequence */
 	ShTps_PowerOn();
 	gnResult = ShTps_Enable_Phase2(poTpsRec);
 	up(&sem);
@@ -1183,7 +1183,7 @@ static int ShTps_SetState(I2cTpsRec *poTpsRec, uint8_t bMask, uint8_t bValue, ui
 	uint8_t bNew;
 	int nResult = 0;
 
-	/* セマフォ取得 */
+	/* Get semaphore */
 	down(&sem);
 
 	bValue &= bMask;
@@ -1191,7 +1191,7 @@ static int ShTps_SetState(I2cTpsRec *poTpsRec, uint8_t bMask, uint8_t bValue, ui
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]SetState[%02X]->[%02X]\n", poTpsRec->mbAccessState, bNew);
 #endif	/* TPS_PRNLOG */
-	/* ２重チェックありなら */
+	/* A double check is effective */
 	if(bCheck)
 	{
 		if((poTpsRec->mbAccessState & bMask) == bValue)
@@ -1199,16 +1199,16 @@ printk(KERN_DEBUG "[ShTps]SetState[%02X]->[%02X]\n", poTpsRec->mbAccessState, bN
 #ifdef TPS_PRNERR
 printk(KERN_DEBUG "[ShTps]StateCheck NG\n");
 #endif	/* TPS_PRNERR */
-			/* セマフォ解放 */
+			/* Semaphore liberating */
 			up(&sem);
 			return -2;
 		}
 	}
-	/* 状態を記録する */
+	/* State is recorded */
 	poTpsRec->mbAccessState = bNew;
 	if(poTpsRec->mbIsActive)
 	{
-		/* 動作OKになったら */
+		/* It is possible to operate */
 		if(bNew == 0x00)
 		{
 			nResult = ShTps_Enable_Phase1(poTpsRec, bResult);
@@ -1219,7 +1219,7 @@ printk(KERN_DEBUG "[ShTps]StateCheck NG\n");
 			nResult = ShTps_Disable(poTpsRec);
 		}
 	}
-	/* セマフォ解放 */
+	/* Semaphore liberating */
 	up(&sem);
 
 	return nResult;
@@ -1232,10 +1232,10 @@ static int ShTps_Enable_Phase1(I2cTpsRec *poTpsRec, uint8_t bResult)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Enable(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
-	/* 初期化する */
+	/* Initialization */
 	gnResult = 0;
 
-	/* 現在オフ状態で阻害要因なしなら */
+	/* Power off and obstruction factor none */
 	if(poTpsRec->mbIsEnable == 0 && poTpsRec->mbAccessState == 0x00)
 	{
 		if(poTpsRec->mbIsTestMode == 0)
@@ -1243,12 +1243,12 @@ printk(KERN_DEBUG "[ShTps]Enable(PID:%ld)\n", sys_getpid());
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Enable ON\n");
 #endif	/* TPS_PRNLOG */
-			/* スレッドで実行する */
+			/* Thread execution */
 			p = kthread_run(ShTps_DelayEnable, poTpsRec, "shtps_delayenable");
-			/* 万が一スレッド起動できなければそのまま同期実行 */
+			/* The same period execution when it is not possible to start */
 			if(IS_ERR(p))
 				ShTps_DelayEnable(poTpsRec);
-			/* 戻り値ありなら */
+			/* There is a return value */
 			if(bResult)
 			{
 #ifdef TPS_PRNLOG
@@ -1260,11 +1260,11 @@ printk(KERN_DEBUG "[ShTps]Result Wait... \n");
 			}
 			return 0;
 		}
-		/* 動作中にする */
+		/* actively */
 		poTpsRec->mbIsEnable = 1;
 	}
 
-	/* セマフォ解放 */
+	/* Semaphore liberating */
 	up(&sem);
 
 	return 0;
@@ -1282,10 +1282,10 @@ static int ShTps_Enable_Phase2(I2cTpsRec *poTpsRec)
 printk(KERN_DEBUG "[ShTps]ShTps_Enable_Phase2(%d:%d)\n", poTpsRec->mbIsActive, poTpsRec->mbAccessState);
 #endif	/* TPS_PRNLOG */
 
-	/* ステートを初期化 */
+	/* The state is initialized.  */
 	poTpsRec->mnState = TPS_STATE_HOVER;
 
-	/* パラメータを設定する */
+	/* Set Parameter */
 	nResult = ShTps_WriteFirmParam(poTpsRec->mpoClient);
 	if(nResult < 0)
 	{
@@ -1293,7 +1293,7 @@ printk(KERN_DEBUG "[ShTps]ShTps_Enable_Phase2(%d:%d)\n", poTpsRec->mbIsActive, p
 		return -1;
 	}
 
-	/* 割込みハンドラの登録 */
+	/* Registration of irq handler */
 	nResult = request_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin), &ShTps_IrqHandler,
 					 IRQF_TRIGGER_LOW | IRQF_DISABLED,
 				     SH_TOUCH_I2C_DEVNAME, poTpsRec);
@@ -1306,11 +1306,11 @@ printk(KERN_DEBUG "[ShTps]ShTps_Enable_Phase2(%d:%d)\n", poTpsRec->mbIsActive, p
 		return -3;
 	}
 
-	/* 初めてのイネーブルなら */
+	/* Started Enable */
 	if(poTpsRec->mbIsFirst & 0x02)
 	{
 #ifdef TPS_PRNLOG
-		/* レジスタの読み込み */
+		/* Register Read */
 		if(0 == ShTps_I2cRead(poTpsRec->mpoClient, 0x00, bData, 18))
 		{
 			wPosX   = (uint16_t)bData[1] + ((uint16_t)(bData[2] & 0xf0) << 4);
@@ -1328,7 +1328,7 @@ printk(KERN_DEBUG "[ShTps]Ver   %02X\n", bData[17]);
 #endif	/* TPS_PRNLOG */
 	}
 	poTpsRec->mbIsFirst= 0x00;
-	/* 動作中にする */
+	/* actively */
 	poTpsRec->mbIsEnable = 1;
 
 	return 0;
@@ -1339,7 +1339,7 @@ static int ShTps_Disable(I2cTpsRec *poTpsRec)
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Disable(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
-	/* 現在オン中で阻害要因があるなら */
+	/* Power on and obstruction factor none */
 	if(poTpsRec->mbIsEnable != 0 && poTpsRec->mbAccessState != 0x00)
 	{
 		if(poTpsRec->mbIsTestMode == 0)
@@ -1347,15 +1347,15 @@ printk(KERN_DEBUG "[ShTps]Disable(PID:%ld)\n", sys_getpid());
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Disable OFF\n");
 #endif	/* TPS_PRNLOG */
-			/* ホバー状態に戻す */
+			/* It returns it to the state of HOVER */
 			if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mbValid != 0)
 			{
-				/* リポート[BTN_TOUCH] */
+				/* Report[BTN_TOUCH] */
 				if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey != NULL)
 				{
 					gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey(poTpsRec->mpoInDev);
 				}
-				/* リポート[ABS_TOOL_WIDTH] */
+				/* Report[ABS_TOOL_WIDTH] */
 				if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportWit != NULL)
 				{
 					gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportWit(poTpsRec->mpoInDev, 0, 0);
@@ -1363,15 +1363,15 @@ printk(KERN_DEBUG "[ShTps]Disable OFF\n");
 				input_sync(poTpsRec->mpoInDev);
 			}
 			poTpsRec->mnState = TPS_STATE_HOVER;
-			/* 割込み登録解除 */
+			/* Interrupt registration release */
 			free_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin), poTpsRec);
-			/* スタンバイにする */
+			/* standby */
 			ShTps_PowerOff();
 		}
-		/* 停止中にする */
+		/* It does while stopping  */
 		poTpsRec->mbIsEnable = 0;
 	}
-	/* 初回起動なら電源オン・オフしておく */
+	/* If it is a start first time, it is power supply ONOFF */
 	else if(poTpsRec->mbIsFirst & 0x01)
 	{
 #ifdef TPS_PRNLOG
@@ -1388,18 +1388,18 @@ static int ShTps_GetFwVer(I2cTpsRec *poTpsRec)
 {
 	uint8_t bData;
 
-	/* オフ状態ならパワーオンする */
+	/* If it is power off, it makes it to power on */
 	if(!poTpsRec->mbIsEnable)
 	{
 		ShTps_PowerOn();
 	}
 
-	/* レジスタの読み込み */
+	/* Register read */
 	if(0 != ShTps_I2cRead(poTpsRec->mpoClient, 0x11, &bData, 1))
 	{
 		return -1;
 	}
-	/* オフ状態に戻す */
+	/* power off */
 	if(!poTpsRec->mbIsEnable)
 	{
 		ShTps_PowerOff();
@@ -1409,7 +1409,7 @@ static int ShTps_GetFwVer(I2cTpsRec *poTpsRec)
 
 static int ShTps_WriteFirmParam(I2cClient *poClient)
 {
-	/* パラメータを初期値を書き込む */
+	/* Set Initial value */
 	if(0 != ShTps_I2cWrite(poClient, 0x09, (uint8_t*)gbSetParam, 7))
 	{
 #ifdef TPS_PRNERR
@@ -1428,35 +1428,35 @@ printk(KERN_DEBUG "[ShTps]TestMode_Start(PID:%ld,%02X)\n", sys_getpid(), bMode);
 #endif	/* TPS_PRNLOG */
 	if(poTpsRec->mbIsTestMode)
 	{
-		/* 既にテストモード状態ならエラーを返す */
+		/* It has already made an error if it is a static test mode */
 		return -2;
 	}
 
-	/* Enable状態なら */
+	/* Enable State */
 	if(poTpsRec->mbIsEnable)
 	{
-		/* 割込み登録解除 */
+		/* Interrupt registration release */
 		free_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin), poTpsRec);
 	}
 	else
 	{
-		/* 電源を入れる */
+		/* Power on */
 		ShTps_PowerOn();
 	}
-	/* テストモード */
+	/* Test mode */
 	if(0 != ShTps_I2cWriteOne(poTpsRec->mpoClient, 0x10, bMode))
 	{
 		return -1;
 	}
-	/* クリアする */
+	/* Sensor value clearness */
 	memset(&gSense, 0x00, 168);
-	/* テストモードにする */
+	/* Test mode */
 	poTpsRec->mbIsTestMode = 1;
-	/* 割込みハンドラの登録 */
+	/* Set Interrupt Handler */
 	nResult = request_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin), &ShTps_IrqHandler,
 						 IRQF_TRIGGER_LOW | IRQF_DISABLED,
 					     SH_TOUCH_I2C_DEVNAME, poTpsRec);
-	/* ウェイト */
+	/* 100msec Wait */
 	mdelay(100);
 
 	return 0;
@@ -1471,18 +1471,18 @@ printk(KERN_DEBUG "[ShTps]TestMode_Stop(PID:%ld)\n", sys_getpid());
 #endif	/* TPS_PRNLOG */
 	if(!poTpsRec->mbIsTestMode)
 	{
-		/* テストモード状態でないならエラーを返す */
+		/* It is not in the static test mode */
 		return -2;
 	}
-	/* 割込み登録解除 */
+	/* Interrupt registration release */
 	free_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin), poTpsRec);
-	/* リセットして電源をオン */
+	/* Power on */
 	ShTps_PowerOn();
 
-	/* Enable状態なら */
+	/* If it is Enable */
 	if(poTpsRec->mbIsEnable)
 	{
-		/* 割込みハンドラの登録 */
+		/* Set Interrupt Handler */
 		nResult = request_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin), &ShTps_IrqHandler,
 							 IRQF_TRIGGER_LOW | IRQF_DISABLED,
 						     SH_TOUCH_I2C_DEVNAME, poTpsRec);
@@ -1496,10 +1496,10 @@ printk(KERN_DEBUG "[ShTps]TestMode_Stop(PID:%ld)\n", sys_getpid());
 	}
 	else
 	{
-		/* スタンバイにする */
+		/* Standby */
 		ShTps_PowerOff();
 	}
-	/* 通常モードにする */
+	/* Usual mode */
 	poTpsRec->mbIsTestMode = 0;
 
 	return 0;
@@ -1518,13 +1518,13 @@ printk(KERN_DEBUG "[ShTps]             INIT PI(%d->%d)\n", gbSetParam[6],pParam[
 	gbSetParam[4] = pParam[0];
 	gbSetParam[6] = pParam[1];
 
-	/* パラメータを設定する */
+	/* Set Parameter */
 	nResult = ShTps_WriteFirmParam(poTpsRec->mpoClient);
 	return nResult;
 }
 
 /*+-----------------------------------------------------------------------------+*/
-/*|	座標調整																	|*/
+/*|	Coordinates adjustment														|*/
 /*+-----------------------------------------------------------------------------+*/
 static void ShTps_Qsort(Qsort_t *pTable, int nTop, int nEnd)
 {
@@ -1578,7 +1578,7 @@ static int ShTps_SetAdjustParam(I2cTpsRec *poTpsRec, uint16_t *pParam)
 	TpsPoint_t sD[ADJUST_POINT];
 	short nDiff[2][6];
 
-	/* 座標調整無効 */
+	/* Coordinates adjustment invalidity */
 	if(pParam == NULL)
 	{
 		poTpsRec->mbAdjustEnable = 0;
@@ -1593,7 +1593,7 @@ printk(KERN_DEBUG "                      (%4d,%4d)(%4d,%4d)\n", pParam[ 4], pPar
 printk(KERN_DEBUG "                      (%4d,%4d)(%4d,%4d))\n", pParam[ 8], pParam[ 9], pParam[10], pParam[11]);
 #endif	/* TPS_PRNLOG */
 
-	/* パラメータチェック 有効範囲(±100) */
+	/* Effective range check */
 	for(nI = 0; nI < ADJUST_POINT; nI++)
 	{
 		if(pParam[nI*2+0] > gBasePt[nI].x + POS_LIMIT ||
@@ -1604,15 +1604,15 @@ printk(KERN_DEBUG "                      (%4d,%4d)(%4d,%4d))\n", pParam[ 8], pPa
 			return -2;
 	}
 
-	/* パラメータ保存 */
+	/* Parameter record */
 	SET_POINT(gAdjustPrm[0], pParam[ 0], pParam[ 1]);
 	SET_POINT(gAdjustPrm[1], pParam[ 2], pParam[ 3]);
 	SET_POINT(gAdjustPrm[2], pParam[ 4], pParam[ 5]);
 	SET_POINT(gAdjustPrm[3], pParam[ 6], pParam[ 7]);
 	SET_POINT(gAdjustPrm[4], pParam[ 8], pParam[ 9]);
 	SET_POINT(gAdjustPrm[5], pParam[10], pParam[11]);
-#if 0	/* DIFF算出方法の変更 */
-	/* DIFF値算出 */
+#if 0	/* Change in DIFF value calculation */
+	/* DIFF value calculation */
 	for(nI = 0; nI < ADJUST_POINT; nI++)
 	{
 		sD[nI].x = (gAdjustPrm[nI].x - gBasePt[nI].x) * 3 / 4;
@@ -1624,16 +1624,16 @@ printk(KERN_DEBUG "                      (%4d,%4d)(%4d,%4d))\n", pParam[ 8], pPa
 		nDiff[0][nI] = (gAdjustPrm[nI].x - gBasePt[nI].x);
 		nDiff[1][nI] = (gAdjustPrm[nI].y - gBasePt[nI].y);
 	}
-	/* 最大値と最小値を切り捨てる */
-	ShTps_RoundValue(nDiff[0]);			/* Xの処理 */
-	ShTps_RoundValue(nDiff[1]);			/* Yの処理 */
+	/* maximum value/minimum value round-down */
+	ShTps_RoundValue(nDiff[0]);			/* X */
+	ShTps_RoundValue(nDiff[1]);			/* Y */
 	for(nI = 0; nI < ADJUST_POINT; nI++)
 	{
 		sD[nI].x = nDiff[0][nI] * 75 / 100;
 		sD[nI].y = nDiff[1][nI] * 75 / 100;
 	}
-#endif	/* DIFF算出方法の変更 */
-	/* 各エリア４隅のぶれ値を保存 */
+#endif	/* Change in DIFF value calculation */
+	/* The value is recorded */
 	/*                     |-------p-------| |-------q-------| |-------r-------| |-------s-------|*/
 	SET_AREA(gAreaDiff[ 0], 0      , 0      , sD[0].x, 0      , 0      , sD[0].y, sD[0].x, sD[0].y);
 	SET_AREA(gAreaDiff[ 1], sD[0].x, 0      , sD[1].x, 0      , sD[0].x, sD[0].y, sD[1].x, sD[1].y);
@@ -1647,7 +1647,7 @@ printk(KERN_DEBUG "                      (%4d,%4d)(%4d,%4d))\n", pParam[ 8], pPa
 	SET_AREA(gAreaDiff[ 9], 0      , sD[4].y, sD[4].x, sD[4].y, 0      , 0      , sD[4].x, 0      );
 	SET_AREA(gAreaDiff[10], sD[4].x, sD[4].y, sD[5].x, sD[5].y, sD[4].x, 0      , sD[5].x, 0      );
 	SET_AREA(gAreaDiff[11], sD[5].x, sD[5].y, 0      , sD[5].y, sD[5].x, 0      , 0      , 0      );
-	/* 座標補正を有効にする */
+	/* The correction is effective */
 	poTpsRec->mbAdjustEnable = 1;
 	return 0;
 }
@@ -1662,7 +1662,7 @@ static void ShTps_AdjustPt(short *pX, short *pY)
 	int32_t lYQS;
 	int32_t lY;
 
-	/* まずエリア分けする */
+	/* Area division */
 	for(nI = 0; nI < AREA_COUNT; nI++)
 	{
 		if(gAreaRect[nI].p.x <= *pX && gAreaRect[nI].s.x > *pX &&
@@ -1671,10 +1671,10 @@ static void ShTps_AdjustPt(short *pX, short *pY)
 			break;
 		}
 	}
-	/* どのエリアにも所属していないなら補正しない */
+	/* There is no correction if it is outside the area */
 	if(nI != AREA_COUNT)
 	{
-		/* 座標補正を実行する */
+		/* Coordinates correction */
 		lXPQ = (((gAreaDiff[nI].q.x*DOUBLE_ACCURACY) - (gAreaDiff[nI].p.x*DOUBLE_ACCURACY)) /
 				(gAreaRect[nI].q.x - gAreaRect[nI].p.x)) * (*pX - gAreaRect[nI].p.x) + (gAreaDiff[nI].p.x*DOUBLE_ACCURACY);
 		lXRS = (((gAreaDiff[nI].s.x*DOUBLE_ACCURACY) - (gAreaDiff[nI].r.x*DOUBLE_ACCURACY)) /
@@ -1688,7 +1688,7 @@ static void ShTps_AdjustPt(short *pX, short *pY)
 		*pX = *pX - (short)(lX / DOUBLE_ACCURACY);
 		*pY = *pY - (short)(lY / DOUBLE_ACCURACY);
 	}
-	/* 範囲外に飛び出さないように最終補正 */
+	/* final correction */
 	*pX = MINMAX(0, SH_TOUCH_MAX_X, *pX);
 	*pY = MINMAX(0, SH_TOUCH_MAX_Y, *pY);
 }
@@ -1698,15 +1698,15 @@ static void ShTps_KeyOn(InputDev *pInDev)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]KeyOn\n");
 #endif	/* TPS_PRNDEB */
-	/* タッチダウン */
+	/* Touching down */
 	input_report_key(pInDev, BTN_TOUCH, KPD_KEYPRESS);
 }
 static void ShTps_KeyOff(InputDev *pInDev)
 {
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]KeyOff\n");
-#endif	/* TPS_PRNDEB */
-	/* タッチアップ */
+#endif	/* Touching up */
+	/* Touching up */
 	input_report_key(pInDev, BTN_TOUCH, KPD_KEYRELEASE);
 }
 static void ShTps_WidOff(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
@@ -1714,14 +1714,14 @@ static void ShTps_WidOff(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]WidOff(0)\n");
 #endif	/* TPS_PRNDEB */
-	/* ツール幅を０にリセットする */
+	/* ABS_TOOL_WIDTH Reset */
 	input_report_abs(pInDev, ABS_TOOL_WIDTH, 0);
 }
 static void ShTps_WidSet(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
 {
 	uint16_t wDistance;
 
-	/** LCDの最大サイズを超えた通知はなし */
+	/** Maximum size excess */
 	if(wDeltaX > SH_TOUCH_MAX_X) {
 		wDeltaX = SH_TOUCH_MAX_X;
 	} if(wDeltaY > SH_TOUCH_MAX_Y) {
@@ -1738,7 +1738,7 @@ static void ShTps_WidWid(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]WidWid(%d)\n", TPS_ERROR_WIDE);
 #endif	/* TPS_PRNDEB */
-	/* エラー通知 */
+	/* error report */
 	input_report_abs(pInDev, ABS_TOOL_WIDTH, TPS_ERROR_WIDE);
 }
 static void ShTps_Wid3Dn(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
@@ -1746,7 +1746,7 @@ static void ShTps_Wid3Dn(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]Wid3Dn(%d)\n", TPS_ERROR_3DOWN);
 #endif	/* TPS_PRNDEB */
-	/* エラー通知 */
+	/* error report */
 	input_report_abs(pInDev, ABS_TOOL_WIDTH, TPS_ERROR_3DOWN);
 }
 static void ShTps_PosSet(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY)
@@ -1754,7 +1754,7 @@ static void ShTps_PosSet(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]PosSet(%d,%d)\n", wPosX, wPosY);
 #endif	/* TPS_PRNDEB */
-	/* 座標セット */
+	/* Coordinates set */
 	input_report_abs(pInDev, ABS_X, wPosX);
 	input_report_abs(pInDev, ABS_Y, wPosY);
 }
@@ -1763,20 +1763,20 @@ static void ShTps_PosErr(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY)
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]PosErr(%d,%d)\n", TPS_ERROR_POS_X, TPS_ERROR_POS_Y);
 #endif	/* TPS_PRNDEB */
-	/* エラー通知 */
+	/* error report */
 	input_report_abs(pInDev, ABS_X, TPS_ERROR_POS_X);
 	input_report_abs(pInDev, ABS_Y, TPS_ERROR_POS_Y);
 }
 
 /*+-----------------------------------------------------------------------------+*/
-/*| ファームウェア書き換え用													|*/
+/*| For firmware rewriting														|*/
 /*+-----------------------------------------------------------------------------+*/
 #define TARGET_DATABUFF_LEN			128
 #define TRANSITION_TIMEOUT			20000
 #define	BLOCKS_PER_BANK				128
 #define	SECURITY_BYTES_PER_BANK		64
 
-/* エラーコード  */
+/* Error code  */
 enum
 {
 	SUCCESS = 0,
@@ -1790,11 +1790,11 @@ enum
 };
 
 /*+-----------------------------------------------------------------------------+*/
-/*| 広域変数定義																|*/
+/*| GLOBAL VARIABLE																|*/
 /*+-----------------------------------------------------------------------------+*/
 static uint32_t gbWait = 1;
 
-static const uint8_t target_id_v[] = {0x07, 0x64, 0x52, 0x21};	/* デバイス【CY8CTMG201-48LTXI】*/
+static const uint8_t target_id_v[] = {0x07, 0x64, 0x52, 0x21};	/* device(CY8CTMG201-48LTXI)*/
 
 static const uint8_t num_bits_wait_and_poll_end = 30;
 static const uint8_t wait_and_poll_end[] =
@@ -1949,7 +1949,7 @@ static int ShTps_ProgramTargetBlock(int nBlockNo);
 static int ShTps_SecureTargetFlash(void);
 
 /*+-----------------------------------------------------------------------------+*/
-/*| マクロの定義																|*/
+/*| Macro definition															|*/
 /*+-----------------------------------------------------------------------------+*/
 #define	SCLKHigh()			ShTps_HsspClk(1);
 #define	SCLKLow()			ShTps_HsspClk(0);
@@ -1968,21 +1968,21 @@ static int ShTps_FwWrite(I2cTpsRec *poTpsRec, TpsFwData *pTpsFirmData)
 
 	if(poTpsRec->mbIsEnable)
 	{
-		/* 割り込み禁止にする */
+		/* Interrupt inhibit */
 		disable_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin));
 	}
-	/* ファームウェアアップデート実行 */
+	/* Firmware update stert */
 	ShTps_SHLCDCPower(1);
 	nResult = ShTps_FwWriteMain(pTpsFirmData);
 	ShTps_SHLCDCPower(0);
 	if(poTpsRec->mbIsEnable)
 	{
-		/* 割り込みを再開する */
+		/* Interrupt restart */
 		enable_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin));
 	}
 	else
 	{
-		/* 電源オフ */
+		/* Power off */
 		ShTps_PowerOff();
 	}
 	return nResult;
@@ -1993,11 +1993,11 @@ static int ShTps_FwWriteMain(TpsFwData *pTpsFirmData)
 	int nResult = 0;
 	int nDownloadStep = 0;
 
-	/* FW書換え処理をおこなう */
+	/* Firmware update stert */
 	do
 	{
 		nResult = ShTps_FwWriteStep(pTpsFirmData->bData, &nDownloadStep);
-		/* エラーならエラーコールバックを実施して終了 */
+		/* Error callback */
 		if(nResult == -1)
 		{
 #ifdef TPS_PRNERR
@@ -2016,9 +2016,9 @@ printk(KERN_DEBUG "[ShTps]Fw_Write::SUCCESS\n");
 
 static int ShTps_FwWriteStep(const uint8_t *pbFwData, int *nStep)
 {
-	static uint16_t wCalcSum;			/* 算出したチェックサムデータ */
-	static int nBlockNo;				/* ブロックカウンター */
-	uint16_t wRecvSum;					/* 受信したチェックサム */
+	static uint16_t wCalcSum;			/* Calculated checksum */
+	static int nBlockNo;				/* Block counter */
+	uint16_t wRecvSum;					/* Reception checksum */
 	int nErrorCode;
 
 	switch(*nStep)
@@ -2026,7 +2026,7 @@ static int ShTps_FwWriteStep(const uint8_t *pbFwData, int *nStep)
 	case 0:
 		(*nStep)++;
 		return 0;
-	case 1:		/* 初期化（リセットモード） */
+	case 1:		/* Initialization (reset mode) */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]XRESInitializeTargetForISSP\n");
 #endif	/* TPS_PRNLOG */
@@ -2041,7 +2041,7 @@ printk(KERN_DEBUG "[ShTps]XRESInitializeTargetForISSP::Error\n");
 		}
 		(*nStep)++;
 		return 7;
-	case 2:		/* シリコンＩＤ検証 */
+	case 2:		/* Silicon ID check */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]VerifySiliconID\n");
 #endif	/* TPS_PRNLOG */
@@ -2056,11 +2056,11 @@ printk(KERN_DEBUG "[ShTps]VerifySiliconID::Error\n");
 		}
 		(*nStep)++;
 		return 4;
-	case 3:		/* チェックサム */
+	case 3:		/* checksum */
 		wRecvSum = 0;
 		(*nStep)++;
 		return 0;
-	case 4:		/* プログラムの削除 */
+	case 4:		/* ProgramErase */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]EraseTarget\n");
 #endif	/* TPS_PRNLOG */
@@ -2074,17 +2074,17 @@ printk(KERN_DEBUG "[ShTps]EraseTarget::Error\n");
 			return -1;
 		}
 		(*nStep)++;
-		/* プログラムブロックの書き込み＆書き込み検証の準備 */
+		/* Writing of program block*/
 		wCalcSum = 0;
 		nBlockNo = 0;
 		return 15;
-	case 5:		/* プログラムブロックの書き込み＆書き込み検証 */
-		/* プログラムデータをダウンロードする */
+	case 5:		/* Writing of program block*/
+		/* program data downloaded */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]LoadTarget [%d]\n", nBlockNo);
 #endif	/* TPS_PRNLOG */
 		wCalcSum += ShTps_LoadTarget(pbFwData, nBlockNo);
-		/* ダウンロードしたプログラムを書き込む */
+		/* Download program writing */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]ProgramTargetBlock Block [%d]\n", nBlockNo);
 #endif	/* TPS_PRNLOG */
@@ -2098,15 +2098,15 @@ printk(KERN_DEBUG "[ShTps]ProgramTargetBlock::Error\n");
 			return -1;
 		}
 		nBlockNo++;
-		/* 最後まで進んだら次の処理へ */
+		/* To the following processing */
 		if(nBlockNo == BLOCKS_PER_BANK)
 		{
 			(*nStep)++;
-			/* セキュリティ書き込みの準備 */
+			/* Preparation for writing security */
 			nBlockNo = 0;
 		}
 		return 14;
-	case 6:		/* セキュリティ書き込み */
+	case 6:		/* writing security */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]SecureTargetFlash [%d]\n", nBlockNo);
 #endif	/* TPS_PRNLOG */
@@ -2120,13 +2120,13 @@ printk(KERN_DEBUG "[ShTps]SecureTargetFlash::Error\n");
 			return -1;
 		}
 		nBlockNo++;
-		/* 最後まで進んだら次の処理へ */
+		/* To the following processing */
 		if(nBlockNo == BLOCKS_PER_BANK)
 		{
 			(*nStep)++;
 		}
 		return 25;
-	case 7:		/* チェックサム検証 */
+	case 7:		/* Checksum verification */
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]ReadCheckSum\n");
 #endif	/* TPS_PRNLOG */
@@ -2151,19 +2151,19 @@ printk(KERN_DEBUG "[ShTps]CheckSum[%04X:%04X]\n",wRecvSum, wCalcSum);
 		(*nStep)++;
 		return 25;
 	case 8:
-		/* SLCK/SDATAを初期状態に戻す */
+		/* SLCK/SDATA Low */
 		SCLKLow();
 		SetSDATALow();
 
 		AssertXRES();
-		udelay(300);	/* 待ち */
+		udelay(300);	/* wait */
 		DeassertXRES();
-		/* 書換え後なので少し待つ */
-		mdelay(300);	/* 待ち */
+		/* It waits after rewriting */
+		mdelay(300);	/* wait */
 		(*nStep)++;
 		return 0;
 	case 9:
-		/* 書き込んだファームからバージョンを得る */
+		/* Version read */
 		*nStep = -1;
 		return 0;
 	default:
@@ -2195,18 +2195,18 @@ static void ShTps_RunClock(int nNumCycles)
 	for(nI = 0; nI < nNumCycles; nI++)
 	{
 		SCLKLow();
-		udelay(gbWait);	/* 待ち */
+		udelay(gbWait);	/* wait */
 		SCLKHigh();
-		udelay(gbWait);	/* 待ち */
+		udelay(gbWait);	/* wait */
 	}
 }
 
 static uint8_t ShTps_ReceiveBit(void)
 {
 	SCLKLow();
-	udelay(gbWait);	/* 待ち */
+	udelay(gbWait);	/* wait */
 	SCLKHigh();
-	udelay(gbWait);	/* 待ち */
+	udelay(gbWait);	/* wait */
 	return ShTps_SDATACheck();
 }
 
@@ -2273,13 +2273,13 @@ static int ShTps_DetectHiLoTransition(void)
 	while(1)
 	{
 		SCLKLow();
-		udelay(gbWait);	/* 待ち */
+		udelay(gbWait);	/* wait */
 		if (ShTps_SDATACheck())       /* exit once SDATA goes HI */
 		{
 			break;
 		}
 		SCLKHigh();
-		udelay(gbWait);	/* 待ち */
+		udelay(gbWait);	/* wait */
 		/* If the wait is too long then timeout */
 		if (dwTimer-- == 0)
 		{
@@ -2294,13 +2294,13 @@ printk(KERN_DEBUG "[ShTps]HiLo Timeout::1\n");
 	while(1)
 	{
 		SCLKLow();
-		udelay(gbWait);	/* 待ち */
+		udelay(gbWait);	/* wait */
 		if(!ShTps_SDATACheck())
 		{   /* exit once SDATA returns LOW  */
 			break;
 		}
 		SCLKHigh();
-		udelay(gbWait);	/* 待ち */
+		udelay(gbWait);	/* wait */
 		/* If the wait is too long then timeout */
 		if(dwTimer-- == 0)
 		{
@@ -2320,7 +2320,7 @@ static int ShTps_XRESInitializeTargetForISSP(void)
 	SetSDATAStrong();
 	/* Cycle reset and put the device in programming mode when it exits reset */
 	AssertXRES();
-	udelay(300);	/* 待ち */
+	udelay(300);	/* wait */
 	DeassertXRES();
 	/* [SETUP1] */
 	ShTps_SendVector(id_setup1_v, num_bits_id_setup1);
@@ -2527,7 +2527,7 @@ static int ShTps_SecureTargetFlash(void)
 	ShTps_SendVector(read_write_v, num_bits_read_write);
 	for(nI = 0, bAddr = 0x00; nI < SECURITY_BYTES_PER_BANK; nI++, bAddr+=2)
 	{
-		bTemp = 0x00;					/* Secureデータはオール0 */
+		bTemp = 0x00;					/* Securedata all 0 */
 		ShTps_SendByte(write_byte_start, 4);
 		ShTps_SendByte(bAddr, 7);
 		ShTps_SendByte(bTemp, 8);
@@ -2549,14 +2549,14 @@ printk(KERN_DEBUG "[ShTps]SECURITY_ERROR\n");
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	外部公開I/F																|*/
+/*|	Public I/F																|*/
 /*+-------------------------------------------------------------------------+*/
 void msm_i2ctps_flipchange(int nFlipState)
 {
 	mutex_lock(&goTpsAccessMutex);
 	if(gpoTpsRec != NULL)
 	{
-		/* フリップオープンなら */
+		/* Flip open */
 		if(nFlipState == 0x00)
 			ShTps_SetState(gpoTpsRec, TPS_DISABLE_FLIP, TPS_DISABLE_OFF, TPS_CHECK_OFF, TPS_RETURN_OFF);
 		else
@@ -2570,7 +2570,7 @@ void msm_i2ctps_setsleep(int nIsSleep)
 	mutex_lock(&goTpsAccessMutex);
 	if(gpoTpsRec != NULL)
 	{
-		/* スリープ解除なら */
+		/* Sleep release */
 		if(nIsSleep == 0x00)
 			ShTps_SetState(gpoTpsRec, TPS_DISABLE_SLEEP, TPS_DISABLE_OFF, TPS_CHECK_OFF, TPS_RETURN_OFF);
 		else
@@ -2587,22 +2587,22 @@ printk(KERN_DEBUG "[ShTps]msm_i2ctps_shutdown(PID:%ld)\n", sys_getpid());
 	mutex_lock(&goTpsAccessMutex);
 	if(gpoTpsRec != NULL)
 	{
-		/* 動作中なら */
+		/* If you are operating */
 		if(gpoTpsRec->mbIsActive)
 		{
-			/* 停止中にする */
+			/* It does while stopping  */
 			ShTps_SetState(gpoTpsRec, TPS_DISABLE_API, TPS_DISABLE_ON, TPS_CHECK_ON, TPS_RETURN_OFF);
 			gpoTpsRec->mbIsActive = 0;
-			/* ワークメモリ解放 */
+			/* Work memory liberating */
 			flush_work(&gpoTpsRec->moIrqWork);
 		}
-		/* 電源オフシーケンス */
-		ShTps_SHLCDCPower(1);		/* SHLCDC PowerON要求 */
+		/* Power off sequence */
+		ShTps_SHLCDCPower(1);		/* Request */
 		ShTps_Standby(0);
 		ShTps_Reset(1);
 		udelay(300);
 		ShTps_Reset(0);
-		ShTps_SHLCDCPower(0);		/* SHLCDC PowerOFF要求 */
+		ShTps_SHLCDCPower(0);		/* Request */
 		mdelay(300);
 		ShTps_I2cWriteOne(gpoTpsRec->mpoClient, 0x10, 0x02);
 	}

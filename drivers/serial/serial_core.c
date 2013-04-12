@@ -58,7 +58,7 @@ static struct lock_class_key port_lock_key;
 #define uart_console(port)	(0)
 #endif
 
-/* ===== ADDED BY CSR: START ===== */
+/* Customize for Bluetooth [001] */
 #define TIOSPSERIAL	        (0x5520)
 #define TIORPSERIAL	        (0x5521)
 
@@ -66,7 +66,7 @@ static struct lock_class_key port_lock_key;
 void msm_hs_request_clock_off(struct uart_port *uport);
 void msm_hs_request_clock_on(struct uart_port *uport);
 #endif
-/* ===== ADDED BY CSR: END ===== */
+/* Customize for Bluetooth [001] */
 
 static void uart_change_speed(struct uart_state *state,
 					struct ktermios *old_termios);
@@ -1167,15 +1167,15 @@ uart_ioctl(struct tty_struct *tty, struct file *filp, unsigned int cmd,
 		ret = uart_get_lsr_info(state, uarg);
 		break;
 
-	/* ===== ADDED BY CSR: START ===== */
+/* Customize for Bluetooth [001] */
 	
 	case TIOSPSERIAL: /* Suspend the HW driver */
     {
 #ifdef CONFIG_SERIAL_MSM_HS
 		struct uart_state *state = tty->driver_data;
 		struct uart_port *port = state->port; ret = 0;
-		// Customize for Bluetooth
-//		gpio_set_value( 155, 0 );
+
+
 		msm_hs_request_clock_off(port);
 		uart_change_pm(state, 3);
 #endif
@@ -1189,8 +1189,8 @@ uart_ioctl(struct tty_struct *tty, struct file *filp, unsigned int cmd,
 		struct uart_state *state = tty->driver_data;
 		struct uart_port *port = state->port;
 
-		// Customize for Bluetooth
-//		gpio_set_value( 155, 1 );
+
+
 		uart_change_pm(state, 0);
 		msm_hs_request_clock_on(port);
 #endif
@@ -1198,7 +1198,7 @@ uart_ioctl(struct tty_struct *tty, struct file *filp, unsigned int cmd,
 		ret = 0;
 		break;
     }
-	/* ===== ADDED BY CSR: END ===== */
+/* Customize for Bluetooth [001] */
 
 	default: {
 		struct uart_port *port = state->port;

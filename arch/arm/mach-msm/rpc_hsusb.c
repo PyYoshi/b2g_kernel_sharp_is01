@@ -710,20 +710,27 @@ int msm_hsusb_set_qxdmen(uint32_t enable)
 		struct rpc_request_hdr hdr;
 		uint32_t qxdm_enb;
 	} req;
+	struct hsusb_rpc_rep {
+		struct rpc_reply_hdr hdr;
+		uint32_t result;
+	} rep;
 
 	if (!usb_ep || IS_ERR(usb_ep))
 		return -EAGAIN;
 	req.qxdm_enb = cpu_to_be32(enable);
-	rc = msm_rpc_call(usb_ep, usb_rpc_ids.set_qxdmen,
-			&req, sizeof(req), 5 * HZ);
+	rc = msm_rpc_call_reply(usb_ep, usb_rpc_ids.set_qxdmen,
+				&req, sizeof(req),
+				&rep, sizeof(rep), 5 * HZ);
 
 	if (rc < 0) {
 		printk(KERN_ERR "%s: set_chgen failed! rc = %d\n",
 			__func__, rc);
-	} else
-		printk(KERN_INFO "msm_hsus_set_qxdmen\n");
+		return rc;
+	}
 
-	return rc;
+	printk(KERN_INFO "%s:result (%d)\n", __func__, rep.result);
+
+	return be32_to_cpu(rep.result);
 }
 EXPORT_SYMBOL(msm_hsusb_set_qxdmen);
 

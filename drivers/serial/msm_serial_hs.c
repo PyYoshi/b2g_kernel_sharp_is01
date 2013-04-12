@@ -660,9 +660,9 @@ out:
 	clk_disable(msm_uport->clk);
 	/* release wakelock in 500ms, not immediately, because higher layers
 	 * don't always take wakelocks when they should */
-#if 0 /* Customize for Bluetooth */
+#if 0 /* Customize for Bluetooth [003] */
 	wake_lock_timeout(&msm_uport->rx.wake_lock, HZ / 2);
-#endif /* Customize for Bluetooth */
+#endif /* Customize for Bluetooth [003] */
 	/* tty_flip_buffer_push() might call msm_hs_start(), so unlock */
 	spin_unlock_irqrestore(&uport->lock, flags);
 	if (flush < FLUSH_DATA_INVALID)
@@ -891,9 +891,9 @@ static int msm_hs_check_clock_off_locked(struct uart_port *uport)
 		enable_irq(msm_uport->wakeup.irq);
 	}
 
-#if 1 /* Customize for Bluetooth */
+#if 1 /* Customize for Bluetooth [003] */
 	wake_unlock(&msm_uport->rx.wake_lock);
-#endif /* Customize for Bluetooth */
+#endif /* Customize for Bluetooth [003] */
 
 	return 1;
 }
@@ -1009,9 +1009,9 @@ static void msm_hs_request_clock_on_locked(struct uart_port *uport) {
 
 	switch (msm_uport->clk_state) {
 	case MSM_HS_CLK_OFF:
-#if 1 /* Customize for Bluetooth */
+#if 1 /* Customize for Bluetooth [003] */
 		wake_lock(&msm_uport->rx.wake_lock);
-#endif /* Customize for Bluetooth */
+#endif /* Customize for Bluetooth [003] */
 		clk_enable(msm_uport->clk);
 		disable_irq(msm_uport->wakeup.irq);
 		/* fall-through */
@@ -1050,17 +1050,17 @@ static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 	if (msm_uport->clk_state == MSM_HS_CLK_OFF) {
 		/* ignore the first irq - it is a pending irq that occured
 		 * before enable_irq() */
-#if 0 /* Customize for Bluetooth */
+#if 0 /* Customize for Bluetooth [002] */
 		if (msm_uport->wakeup.ignore)
 			msm_uport->wakeup.ignore = 0;
 		else
 			wakeup = 1;
-#else /* Customize for Bluetooth */
+#else /* Customize for Bluetooth [002] */
 		if (msm_uport->wakeup.ignore) {
 			msm_uport->wakeup.ignore = 0;
 			wakeup = 1;
         }
-#endif /* Customize for Bluetooth */
+#endif /* Customize for Bluetooth [002] */
 	}
 
 	if (wakeup) {
@@ -1186,14 +1186,14 @@ static int msm_hs_startup(struct uart_port *uport)
 	if (unlikely(ret))
 		return ret;
 
-/* Customize for Bluetooth { */
+/* Customize for Bluetooth [001] */
 #if 0
     msm_uport->wakeup.irq = MSM_GPIO_TO_INT(139);
     msm_uport->wakeup.inject_rx = 1;
     msm_uport->wakeup.rx_to_inject = 0x32;
     set_irq_wake(msm_uport->wakeup.irq, 1);
 #endif
-/* } Customize for Bluetooth */
+/* Customize for Bluetooth [001] */
 
 	if (use_low_power_wakeup(msm_uport)) {
 		ret = request_irq(msm_uport->wakeup.irq, msm_hs_wakeup_isr,
@@ -1308,7 +1308,7 @@ static int __init msm_hs_probe(struct platform_device *pdev)
 		return -ENXIO;
 
 	if (pdata == NULL) {
-/* Customize for Bluetooth { */
+/* Customize for Bluetooth [001] */
 #if 1
         msm_uport->wakeup.irq = MSM_GPIO_TO_INT(139);
         msm_uport->wakeup.inject_rx = 1;
@@ -1317,7 +1317,7 @@ static int __init msm_hs_probe(struct platform_device *pdev)
 #else
 		msm_uport->wakeup.irq = -1;
 #endif
-/* } Customize for Bluetooth */
+/* Customize for Bluetooth [001] */
 	} else {
 		msm_uport->wakeup.irq = pdata->wakeup_irq;
 		msm_uport->wakeup.ignore = 1;

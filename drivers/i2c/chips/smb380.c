@@ -28,7 +28,7 @@
 #define DEBUG 0
 
 /*+-------------------------------------------------------------------------+*/
-/*|	型宣言																	|*/
+/*|	TYPEDEF																	|*/
 /*+-------------------------------------------------------------------------+*/
 typedef struct i2c_record      I2cAccelRec;
 typedef struct i2c_client       I2cClt;
@@ -55,8 +55,8 @@ struct i2c_record
 
 typedef struct
 {
-	uint8_t	mbRegAdr;					/* レジスタアドレス */
-	uint8_t mbData;						/* データ */
+	uint8_t	mbRegAdr;					/* register address */
+	uint8_t mbData;						/* data */
 } I2cWriteData;
 
 #define IRQNO(poKbdRec)  (MSM_GPIO_TO_INT(poKbdRec->mnIrqPin))
@@ -75,40 +75,40 @@ static int __devinit Smb380_Probe(I2cClt *client, const I2cDevID *poDevId);
 
 static const I2cWriteData goAccInitialize[] =
 	{
-		{	SMB380_REG_SMB380_CONF2,    0x00	},			/* ALLクリア */
-		{	SMB380_REG_SMB380_CONF1,    0x00	},			/* ALLクリア */
-		{	SMB380_REG_SMB380_CTRL,     0x01	},			/* スリープ許可 */
-		{	0xFF,                       0x00	},			/* 終端 */
+		{	SMB380_REG_SMB380_CONF2,    0x00	},			/* ALL clear */
+		{	SMB380_REG_SMB380_CONF1,    0x00	},			/* ALL clear */
+		{	SMB380_REG_SMB380_CTRL,     0x01	},			/* sleep mode */
+		{	0xFF,                       0x00	},			/* end */
 	};
 
 static const I2cWriteData goAccEnable[] =
 	{
 #if 0
-		{	0x0A,	0x01	},			/* スリープ許可 */
-		{	0x15,	0x40	},			/* ALLクリア */
+		{	0x0A,	0x01	},			/* sleep mode */
+		{	0x15,	0x40	},			/* ALL clear */
 		{	0x11,	0x40	},			/* 3Shot */
-		{	0x10,	0x06	},			/* 復帰割込み閾値設定 */
-		{	0x0B,	0x40	},			/* AnyMotionを設定 */
-		{	0x0A,	0x00	},			/* スリープ */
-		{	0xFF,	0x00	},			/* 終端 */
+		{	0x10,	0x06	},			/* IRQ threshold */
+		{	0x0B,	0x40	},			/* AnyMotion set */
+		{	0x0A,	0x00	},			/* wakeup mode */
+		{	0xFF,	0x00	},			/* end */
 #else
 		{	0x15,	0x20	},			/* NewData IRQ Enable */
-		{	0x0A,	0x00	},			/* スリープ解除 */
-		{	0xFF,	0x00	},			/* 終端 */
+		{	0x0A,	0x00	},			/* wakeup mode */
+		{	0xFF,	0x00	},			/* end */
 #endif
 	};
 static const I2cWriteData goAccIntReset[] =
 	{
-		{	0x15,	0x00	},			/* ALLクリア */
-		{	0x0B,	0x00	},			/* ALLクリア */
+		{	0x15,	0x00	},			/* ALL clear */
+		{	0x0B,	0x00	},			/* ALL clear */
 		{	0x0A,	0x40	},			/* RESET INT */
-		{	0x0A,	0x01	},			/* スリープ */
-		{	0xFF,	0x00	},			/* 終端 */
+		{	0x0A,	0x01	},			/* sleep mode */
+		{	0xFF,	0x00	},			/* end */
 	};
 
 #if 1
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cリード																|*/
+/*|	I2C Read																|*/
 /*+-------------------------------------------------------------------------+*/
 static int Smb380_I2cRead(I2cClt *client, uint8_t bRegAdr, uint8_t *pbBuf, uint32_t dwLen)
 {
@@ -141,7 +141,7 @@ static int Smb380_I2cRead(I2cClt *client, uint8_t bRegAdr, uint8_t *pbBuf, uint3
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cライト																|*/
+/*|	I2C Write																|*/
 /*+-------------------------------------------------------------------------+*/
 static int Smb380_I2cWriteOne(I2cClt *client, uint8_t bRegAdr, uint8_t bData)
 {
@@ -179,7 +179,7 @@ static int Smb380_I2cWriteAny(I2cClt *client, const I2cWriteData *poData)
 	int nI;
 	int nResult;
 
-	/* 設定を行う */
+	/* Setting */
 	for(nI = 0; poData[nI].mbRegAdr != 0xFF; nI++)
 	{
 		nResult = Smb380_I2cWriteOne(client, poData[nI].mbRegAdr, poData[nI].mbData);
@@ -288,7 +288,7 @@ static int Smb380_ioctl(struct inode *inode, struct file *filp,
 #if DEBUG
             printk(KERN_DEBUG "[SMB380]Read X:%5d Y:%5d Z:%5d\n", nXYZ[0], nXYZ[1], nXYZ[2]);
 #endif
-            if(copy_to_user(argp,&nXYZ,sizeof(nXYZ))) /* データ返還 */
+            if(copy_to_user(argp,&nXYZ,sizeof(nXYZ)))
                return -EFAULT;
         }
         else
@@ -303,7 +303,7 @@ static int Smb380_ioctl(struct inode *inode, struct file *filp,
 #if DEBUG
         printk(KERN_DEBUG "[SMB380]IO SMB380_SET_RANGE\n");
 #endif
-	    /* 設定を行う */
+	    /* Setting */
 	    bRegAdr = SMB380_REG_RANGE_BWIDTH;
         if(Smb380_I2cRead(this_client, bRegAdr, &bData, 1) < 0)
 		    return -EIO;
@@ -313,7 +313,7 @@ static int Smb380_ioctl(struct inode *inode, struct file *filp,
         if(Smb380_I2cWriteOne(this_client, bRegAdr, bData) < 0)
     		return -EIO;
 
-        /* 加速度安定更新待ち */
+        /* wait */
         mdelay(2);
 		break;
     case SMB380_SET_MODE:
@@ -329,7 +329,7 @@ static int Smb380_ioctl(struct inode *inode, struct file *filp,
 #if DEBUG
         printk(KERN_DEBUG "[SMB380]IO SMB380_SET_BANDWIDTH\n");
 #endif
-	    /* 設定を行う */
+	    /* Setting */
 	    bRegAdr = SMB380_REG_RANGE_BWIDTH;
         if(Smb380_I2cRead(this_client, bRegAdr, &bData, 1) < 0)
 		    return -EIO;
@@ -339,7 +339,7 @@ static int Smb380_ioctl(struct inode *inode, struct file *filp,
         if(Smb380_I2cWriteOne(this_client, bRegAdr, bData) < 0)
     		return -EIO;
 
-        /* 加速度安定更新待ち */
+        /* wait */
         mdelay(2);
 		break;
 	default:
@@ -367,7 +367,7 @@ static int Smb380_ReleaseGPIO(I2cAccelRec *poAccelRec)
 {
 	if(poAccelRec == NULL)
 		return -EINVAL;
-	/* GPIOの解放 */
+	/* GPIO release */
 	dev_info(&poAccelRec->mpoI2C_Clt->dev, "releasing gpio pins %d\n", poAccelRec->mnIrqPin);
 	poAccelRec->mpfPinShutdownFunc();
 	return 0;
@@ -389,7 +389,7 @@ static int Smb380_Initialize(I2cAccelRec *poAccelRec, I2cClt *client)
 #if DEBUG
 printk(KERN_DEBUG "[SMB380]Initialize()\n");
 #endif
-	/* 設定を行う */
+	/* Setting */
 	if(0 > Smb380_I2cRead(client, SMB380_REG_RANGE_BWIDTH, &bData, 1))
 	{
 #if DEBUG
@@ -479,7 +479,7 @@ static const I2cDevID gI2cDevIdTableAcc[] =
 MODULE_DEVICE_TABLE(i2c, gI2cDevIdTableAcc);
 
 
-/* I2Cドライバ呼び出し用構造体 */
+/* I2C Driver Call Data */
 static struct i2c_driver goI2cAccDriver =
 {
 	.driver =
@@ -547,7 +547,7 @@ printk(KERN_DEBUG "[SMB380]Probe()\n");
 	}
 
 exit_misc_device_register_failed:
-	/* GPIOの解放 */
+	/* GPIO release */
 	Smb380_ReleaseGPIO(poAccelRec);
 	kfree(poAccelRec);
 

@@ -1,17 +1,3 @@
-/*
- * Copyright (C) 2009 Sharp.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/fs.h>
@@ -26,6 +12,7 @@
 #include <linux/smp_lock.h>
 #include <linux/delay.h>
 #include <mach/sharp_smem.h>
+#include <linux/vmalloc.h>
 
 #include <linux/proc_fs.h>
 
@@ -34,6 +21,7 @@
 #define DGSTMGRD_SIG "dgstmgrd:"
 #define DGSTMGRD_SIG_SIZE (9)
 #define DGSTMGRD_KEY_LENGTH (32)
+#define DGSTMGRD_DATALIST_LENGTH (8192)
 #define sphinx_printk if(0)printk
 
 typedef enum
@@ -517,6 +505,15 @@ static pid_t package_held_pid = -1;
 
 #define PACKAGE_SHOW_MAX_LEN (256)
 
+static int package_show_verify(struct task_struct* process)
+{
+	if(process == NULL)return 0;
+	if(process->mm == NULL)return 0;
+	if(process->mm->mmap == NULL)return 0;
+
+	return 1;
+}
+
 static ssize_t package_show(struct kobject *kobj, struct attribute *attr, char *buf)
 {
 	struct task_struct* process;
@@ -528,14 +525,28 @@ static ssize_t package_show(struct kobject *kobj, struct attribute *attr, char *
 	char bf[PACKAGE_SHOW_MAX_LEN + 1];
 	char cf[PACKAGE_SHOW_MAX_LEN + 1];
 	char df[PACKAGE_SHOW_MAX_LEN + 1];
+	static char ef[PACKAGE_SHOW_MAX_LEN + 1];
 	ssize_t ret = 0;
 	int state0 = 0;
 	int state1 = 0;
 	char* p;
+	char* p_data = NULL;
+	int data_len = 0;
+
+	p_data = vmalloc(DGSTMGRD_DATALIST_LENGTH);
+
+	if(p_data == NULL)
+	{
+		return 0;
+	}
 
 	memset(tmp, 0, PACKAGE_SHOW_MAX_LEN + 1);
 	memset(bf, 0, PACKAGE_SHOW_MAX_LEN + 1);
 	memset(cf, 0, PACKAGE_SHOW_MAX_LEN + 1);
+	memset(ef, 0, PACKAGE_SHOW_MAX_LEN + 1);
+	memset(p_data, 0, DGSTMGRD_DATALIST_LENGTH);
+
+	read_lock(&tasklist_lock);
 
 	if(package_held_pid != -1)
 	{
@@ -543,13 +554,15 @@ static ssize_t package_show(struct kobject *kobj, struct attribute *attr, char *
 
 		process = find_task_by_vpid(package_held_pid);
 
-		if(process)
+		if(package_show_verify(process))
 		{
 			mm = process->mm;
 			vm_area = mm->mmap;
 		
 			for(i = 0, ii = 0; i < mm->map_count; i++)
 			{
+				if(!vm_area)break;
+
 				file = vm_area->vm_file;
 		
 				if(file)
@@ -752,7 +765,15 @@ static ssize_t package_show(struct kobject *kobj, struct attribute *attr, char *
 
 								snprintf(df, PACKAGE_SHOW_MAX_LEN - 1, "/data/dalvik-cache/%s@classes.dex", cf);
 
-								if(strcmp(p, df) == 0)
+								if(strstr(p, "/data/dalvik-cache/") && strstr(p, "@classes.dex"))
+								{
+									memset(ef, 0, PACKAGE_SHOW_MAX_LEN + 1);
+									strncpy(ef, p, PACKAGE_SHOW_MAX_LEN);
+
+									sphinx_printk("classed.dex held : %s\n", ef);
+								}
+
+								if(strcmp(ef, df) == 0)
 								{
 									state1 = 1;
 									sphinx_printk("%s\n", df);
@@ -823,11 +844,29 @@ static ssize_t package_show(struct kobject *kobj, struct attribute *attr, char *
 
 					if(strstr(p, "/data") == p && strstr(p, "/data/dalvik-cache") == NULL && strstr(p, "/data/app") == NULL && strstr(p, ".apk") == NULL)
 					{
-						sphinx_printk("refused !!\n");
+						if(strstr(p, "/data/data") == p && strstr(p, "/lib/") != NULL && strstr(p, ".so") != NULL)
+						{
+							int l = strlen(p);
 
-						ret = 0;
+							if(data_len + l + 1 >= DGSTMGRD_DATALIST_LENGTH)
+							{
+								ret = 0;
 
-						break;
+								break;
+							}
+
+							snprintf(p_data + data_len, DGSTMGRD_DATALIST_LENGTH - 1, "\n%s", p);
+
+							data_len = data_len + l + 1;
+						}
+						else
+						{
+							sphinx_printk("refused !!\n");
+
+							ret = 0;
+
+							break;
+						}
 					}
 
 					ii++;
@@ -838,6 +877,21 @@ static ssize_t package_show(struct kobject *kobj, struct attribute *attr, char *
 		}
 
 		package_held_pid = -1;
+	}
+
+	read_unlock(&tasklist_lock);
+
+	if(ret > 0 && data_len > 0)
+	{
+		sprintf(buf + ret, "%s", p_data);
+
+		ret += data_len;
+	}
+
+	if(p_data != NULL)
+	{
+		vfree(p_data);
+		p_data = NULL;
 	}
 
 	sphinx_printk("ret : %d\n", ret);
@@ -915,8 +969,8 @@ static void __exit sphinx_exit(void)
 {
 	kset_unregister(sphinx_kset);
 }
-
+/* Copyright (C) 2009 SHARP CORPORATION All rights reserved. This software is licensed under the terms of the GNU General Public License version 2, as published by the Free Software Foundation, and may be copied, distributed, and modified under those terms. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details. */
 module_init(sphinx_init);
 module_exit(sphinx_exit);
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("shibata");
+MODULE_LICENSE("GPL2");
+MODULE_AUTHOR(" SHARP ");

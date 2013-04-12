@@ -2661,8 +2661,13 @@ void usb_function_enable(const char *function, int enable)
 	}
 
 	if(!strcmp(QXDM_FUNCTION_NAME,fi->func->name)) {
-		qxdm_enable = enable;
-		msm_hsusb_set_qxdmen(qxdm_enable);
+		int ret;
+		
+		ret = msm_hsusb_set_qxdmen(enable);
+		if (ret < 0)
+			return;
+		else
+			qxdm_enable = ret;
 	}
 	else if(!strcmp("adb",fi->func->name)){
 		if(hs_connect_enable == 1){

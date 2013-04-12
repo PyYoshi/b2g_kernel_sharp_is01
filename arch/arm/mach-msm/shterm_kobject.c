@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2010 Sharp Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #include <linux/kernel.h>
 #include <linux/kobject.h>
@@ -31,6 +44,7 @@ static struct semaphore shterm_sem;
 static struct semaphore shterm_flip_sem;
 
 static int shterm_info[SHTERM_MAX];
+static int shterm_info_read[SHTERM_MAX];
 static int shterm_flip_status = SHTERM_FLIP_STATE_CLOSE;
 static unsigned long int flip_counter = 0;
 
@@ -147,6 +161,9 @@ int shterm_k_set_info( unsigned long int shterm_info_id, unsigned long int shter
     }
 
     shterm_info[shterm_info_id] = shterm_info_value;
+    if( shterm_info_value ){
+        shterm_info_read[shterm_info_id] = shterm_info_value;
+    }
 
     up( &shterm_sem );
 
@@ -435,7 +452,8 @@ static ssize_t shterm_info_show( struct kobject *kobj, struct attribute *attr, c
             return -ERESTARTSYS;
         }
 
-        ret = sprintf( buff, "%d", shterm_info[n] );
+        ret = sprintf( buff, "%d", shterm_info_read[n] );
+        memcpy( shterm_info_read, shterm_info, sizeof(shterm_info_read) );
 
         up( &shterm_sem );
     }
@@ -485,16 +503,20 @@ static ssize_t shterm_info_store( struct kobject *kobj, struct attribute *attr, 
             if( val ){
                 if( shterm_info[n] < 100 ){
                     shterm_info[n]++;
+                    shterm_info_read[n] = val;
                 }
             }
             else {
-                if( shterm_info[n] ){
+                if( shterm_info[n] > 0 ){
                     shterm_info[n]--;
                 }
             }
         }
         else {
             shterm_info[n] = val;
+            if( val ){
+                shterm_info_read[n] = val;
+            }
         }
 
         up( &shterm_sem );
@@ -526,6 +548,7 @@ static int __init shterm_kobject_init( void )
     sema_init( &shterm_sem, 1 );
     sema_init( &shterm_flip_sem, 1 );
     memset( shterm_info, 0x00, sizeof(shterm_info) );
+    memset( shterm_info_read, 0x00, sizeof(shterm_info_read) );
 
     return ret;
 }
@@ -538,4 +561,4 @@ static void __exit shterm_kobject_exit( void )
 module_init(shterm_kobject_init);
 module_exit(shterm_kobject_exit);
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Nakagawa");
+MODULE_AUTHOR("SHARP");

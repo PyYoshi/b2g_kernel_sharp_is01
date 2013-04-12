@@ -167,8 +167,22 @@ static int deckard_sb_mount(char *dev_name, struct path *path,
 	return 0;
 }
 
+#ifndef CONFIG_SECURITY_DECKARD_SYSTEM_MOUNT_POINT
+#define CONFIG_SECURITY_DECKARD_SYSTEM_MOUNT_POINT "system"
+#endif
+
 static int deckard_sb_umount(struct vfsmount *mnt, int flags)
 {
+	(void)flags;
+
+	if(mnt && mnt->mnt_mountpoint && 
+	   strncmp(mnt->mnt_mountpoint->d_name.name, CONFIG_SECURITY_DECKARD_SYSTEM_MOUNT_POINT,
+	   strlen(CONFIG_SECURITY_DECKARD_SYSTEM_MOUNT_POINT)) == 0) {
+		printk(KERN_ERR "%s: REJECT mountpoint=%s\n", __FUNCTION__, mnt->mnt_mountpoint->d_name.name);
+
+		return -EPERM;
+	}
+
 	return 0;
 }
 
@@ -188,6 +202,40 @@ static int deckard_sb_pivotroot(struct path *old_path, struct path *new_path)
 	       __FUNCTION__, old_realpath, new_realpath);
 
 	return -EPERM;
+}
+
+static int deckard_path_symlink(struct path *dir, struct dentry *dentry, const char *old_name)
+{
+	static char realdir[PATH_MAX];
+	int r;
+
+	r = _xx_realpath_from_path(dir, realdir, PATH_MAX - 1);
+
+	if (r != 0) return r;
+
+	if(strncmp(realdir, CONFIG_SECURITY_DECKARD_SYSTEM_DIR_PATH,
+		    strlen(CONFIG_SECURITY_DECKARD_SYSTEM_DIR_PATH)) == 0)
+	{
+		printk(KERN_ERR "%s: REJECT dir=%s\n", __FUNCTION__, realdir);
+
+		return -EPERM;
+	}
+
+	if((strcmp(realdir, "/") == 0) && 
+	    (strncmp(dentry->d_name.name, CONFIG_SECURITY_DECKARD_SYSTEM_MOUNT_POINT, 
+	            strlen(CONFIG_SECURITY_DECKARD_SYSTEM_MOUNT_POINT)) == 0))
+	{
+		printk(KERN_ERR "%s: REJECT dir + dentry=%s%s\n", __FUNCTION__, realdir, dentry->d_name.name);
+
+		return -EPERM;
+	}
+
+	return 0;
+}
+
+static int deckard_path_link(struct dentry *old_dentry, struct path *new_dir, struct dentry *new_dentry)
+{
+	return 0;
 }
 
 #if 0
@@ -242,6 +290,8 @@ static struct security_operations deckard_security_ops = {
 	.sb_umount =		deckard_sb_umount,
 	.sb_pivotroot =		deckard_sb_pivotroot,
 #ifdef CONFIG_SECURITY_PATH
+	.path_symlink =		deckard_path_symlink,
+	.path_link =		deckard_path_link,
 	.path_chroot =		deckard_path_chroot,
 #endif
 };

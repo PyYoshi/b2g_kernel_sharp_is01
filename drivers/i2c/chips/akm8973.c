@@ -147,7 +147,7 @@ static int AKI2C_RxData(char *rxData, int length)
 	printk(KERN_INFO "%s\n", __FUNCTION__);
 #endif
 
-    /* リトライ対策 */
+    /* retry */
     rxData_Add[0] = rxData[0];
 
 	for(nI = 0; nI < I2C_RETRY; nI++)
@@ -1144,7 +1144,7 @@ static int akm8973_ReleaseGPIO(struct sh_i2c_compass_platform_data *poSetupData)
 {
 	if(poSetupData == NULL)
 		return -EINVAL;
-	/* GPIOの解放 */
+	/* GPIO release */
 	poSetupData->gpio_shutdown();
 	return 0;
 }
@@ -1157,10 +1157,10 @@ static int akm8973_Initialize(struct sh_i2c_compass_platform_data *poSetupData)
 #if DEBUG
 	printk(KERN_DEBUG "[akm8973]Initialize()\n");
 #endif
-	/* リセットを行う */
+	/* Reset */
     AKECS_Reset();
 
-    /* EEPROMアクセスモード */
+    /* EEPROM mode */
 	if(AKECS_StartE2PRead())
 	{
 #if DEBUG
@@ -1181,7 +1181,7 @@ static int akm8973_Initialize(struct sh_i2c_compass_platform_data *poSetupData)
     printk(KERN_DEBUG "[COMPASS]GainData %Xh,%Xh,%Xh\n",GainData[0],GainData[1],GainData[2]);
 #endif
 
-    /* パワーダウンモード */
+    /* PowerDown */
 	if(AKECS_PowerDown())
 	{
 #if DEBUG

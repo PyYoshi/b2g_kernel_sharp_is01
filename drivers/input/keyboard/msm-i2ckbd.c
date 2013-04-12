@@ -78,12 +78,12 @@
  *
  */
 
-#define	JOG_TIMER_TEST		/* 初回変化を無視する対応 */
+#define	JOG_TIMER_TEST
 #define	ROTATE_90
 /* #define	KBD_DEBPRN */
 
 /*+-------------------------------------------------------------------------+*/
-/*|	インクルードファイル													|*/
+/*|	INCLUDE FILE															|*/
 /*+-------------------------------------------------------------------------+*/
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
@@ -99,27 +99,27 @@
 #endif /* JOG_TIMER_TEST */
 
 /*+-------------------------------------------------------------------------+*/
-/*|	定数宣言																|*/
+/*|	DECLARE																	|*/
 /*+-------------------------------------------------------------------------+*/
 
-/* キーマイコンレジスタ番号 */
+/* Key register number */
 /*+---------------------------------+*/
-/*|	パワーオンリセットレジスタ		|*/
+/*|	Power-on reset register			|*/
 /*+---------------------------------+*/
 #define	KPD_RSTINTCLR			0x84
 #define	KPD_RSTINTCLR_IRQCLR	0x01
 /*+---------------------------------+*/
-/*|	クロックモードレジスタ			|*/
+/*|	Clock mode register				|*/
 /*+---------------------------------+*/
 #define	KPD_CLKMODE				0x88
 #define	KPD_CLKMODE_MODCTL		0x01
 /*+---------------------------------+*/
-/*|	クロック設定レジスタ			|*/
+/*|	Clock setting register			|*/
 /*+---------------------------------+*/
 #define	KPD_CLKCFG				0x89
 #define	KPD_CLKCFG_CLKSRCSEL	0x40
 /*+---------------------------------+*/
-/*|	クロック許可レジスタ			|*/
+/*|	Clock permission register		|*/
 /*+---------------------------------+*/
 #define	KPD_CLKEN				0x8A
 #define	KPD_CLKEN_TIMOSCEN2		0x20
@@ -128,62 +128,62 @@
 #define	KPD_CLKEN_TIMEN			0x04
 #define	KPD_CLKEN_KBDEN			0x01
 /*+---------------------------------+*/
-/*|	オートスリープ機能レジスタ		|*/
+/*|	Auto sleep function register	|*/
 /*+---------------------------------+*/
 #define	KPD_AUTOSLPENA			0x8B
 #define	KPD_AUTOSLPENA_ENABLE	0x01
 /*+---------------------------------+*/
-/*|	オートスリープタイマーレジスタ	|*/
+/*|	Auto sleep timer register		|*/
 /*+---------------------------------+*/
 #define	KPD_AUTOSLPTIMER1		0x8C
 #define	KPD_AUTOSLPTIMER2		0x8D
 /*+---------------------------------+*/
-/*|	I2Cウェイクアップレジスタ		|*/
+/*|	I2C wake up register			|*/
 /*+---------------------------------+*/
 #define	KPD_I2CWAKEUPEN			0x8E
 #define	KPD_I2CWAKEUPEN_I2CWEN	0x01
 /*+---------------------------------+*/
-/*|	割込みステータスレジスタ		|*/
+/*|	IRQ status register				|*/
 /*+---------------------------------+*/
 #define	KPD_IRQST				0x91
 #define	KPD_IRQST_PORIRQ		0x80
 #define	KPD_IRQST_KBDIRQ		0x40
 #define	KPD_IRQST_RESERVED		0x20
-/* (0x10は空欄) */
+/* (0x10 Empty) */
 #define	KPD_IRQST_TIM2IRQ		0x08
 #define	KPD_IRQST_TIM1IRQ		0x04
 #define	KPD_IRQST_TIM0IRQ		0x02
 #define	KPD_IRQST_GPIIRQ		0x01
 /*+---------------------------------+*/
-/*|	処理Wait時間の設定レジスタ		|*/
+/*|	Wait time setting register		|*/
 /*+---------------------------------+*/
 #define	KPD_KBDSETTLE			0x01
 /*+---------------------------------+*/
-/*|	デバウンスの設定レジスタ		|*/
+/*|	Debounce setting register		|*/
 /*+---------------------------------+*/
 #define	KPD_KBDBOUNCE			0x02
 /*+---------------------------------+*/
-/*|	マトリックスの設定レジスタ		|*/
+/*|	Matrix setting register			|*/
 /*+---------------------------------+*/
 #define	KPD_KBDSIZE				0x03
 /*+---------------------------------+*/
-/*|	専用キーの設定レジスタ			|*/
+/*|	Special key setting register	|*/
 /*+---------------------------------+*/
 #define	KPD_KBDDEDCFG_H			0x04
 #define	KPD_KBDDEDCFG_L			0x05
 /*+---------------------------------+*/
-/*|	キーコードレジスタ				|*/
+/*|	Key code register				|*/
 /*+---------------------------------+*/
 #define	KPD_KEYCODE0			0x0B
 #define	KPD_KEYCODE1			0x0C
 #define	KPD_KEYCODE2			0x0D
 #define	KPD_KEYCODE3			0x0E
 /*+---------------------------------+*/
-/*|	イベントレジスタ				|*/
+/*|	Event register					|*/
 /*+---------------------------------+*/
 #define	KPD_EVTCODE				0x10
 /*+---------------------------------+*/
-/*|	KBDロー割込みレジスタ			|*/
+/*|	KBD low IRQ register			|*/
 /*+---------------------------------+*/
 #define	KPD_KBDRIS				0x06
 #define	KPD_KBDRIS_RELINT		0x08
@@ -191,7 +191,7 @@
 #define	KPD_KBDRIS_RKLINT		0x02
 #define	KPD_KBDRIS_RSINT		0x01
 /*+---------------------------------+*/
-/*|	KBDマスク割込みレジスタ			|*/
+/*|	KBD mask IRQ register			|*/
 /*+---------------------------------+*/
 #define	KPD_KBDMIS				0x07
 #define	KPD_KBDMIS_MELINT		0x08
@@ -199,14 +199,14 @@
 #define	KPD_KBDMIS_MKLINT		0x02
 #define	KPD_KBDMIS_MSINT		0x01
 /*+---------------------------------+*/
-/*|	KBD割込みクリアレジスタ			|*/
+/*|	KBD IRQ clearness register		|*/
 /*+---------------------------------+*/
 #define	KPD_KBDIC				0x08
 #define	KPD_KBDIC_SFOFF			0x80
 #define	KPD_KBDIC_EVTIC			0x02
 #define	KPD_KBDIC_KBDIC			0x01
 /*+---------------------------------+*/
-/*|	KBDマスクレジスタ				|*/
+/*|	KBD mask register				|*/
 /*+---------------------------------+*/
 #define	KPD_KBDMSK				0x09
 #define	KPD_KBDMSK_MSKELNT		0x08
@@ -214,12 +214,12 @@
 #define	KPD_KBDMSK_MSKKLI		0x02
 #define	KPD_KBDMSK_MSKSINT		0x01
 /*+---------------------------------+*/
-/*|	KBD変更特徴設定レジスタ			|*/
+/*|	KBD change feature setting register|*/
 /*+---------------------------------+*/
 #define	KPD_KBDMFS				0x8F
 
 /*+---------------------------------+*/
-/*|	プル設定レジスタ				|*/
+/*|	Pul setting register			|*/
 /*+---------------------------------+*/
 #define	KPD_IOPC0_H				0xAA
 #define	KPD_IOPC0_L				0xAB
@@ -228,7 +228,7 @@
 #define	KPD_IOPC2_H				0xAE
 #define	KPD_IOPC2_L				0xAF
 /*+---------------------------------+*/
-/*|	GPIOウェイクアップレジスタ		|*/
+/*|	GPIO wake up register			|*/
 /*+---------------------------------+*/
 #define	KPD_GPIOWAKE0			0xE9
 #define	KPD_GPIOWAKE1			0xEA
@@ -239,13 +239,13 @@
 #define	KPD_KEYPRESS			1
 #define	KPD_KEYRELEASE			0
 
-#define	KPD_KEYBUFF_SIZE		4		/* キーバッファサイズ */
+#define	KPD_KEYBUFF_SIZE		4		/* Key buffer size */
 #define	KPD_KEYCODE_MASK		0x7f
 #define	KPD_INVALID_KEY			0x7f
 
 #define	KPD_KEY_MAX				128
 
-/* コマンド */
+/* Command */
 enum
 {
 	QPHYSLEN			= 128,
@@ -254,7 +254,7 @@ enum
 	QCVERSION_ID		= 1
 };
 
-#define	REL_STEP				1		/* 相対移動する距離 */
+#define	REL_STEP				1		/* Moved distance */
 
 #define	INITDELAY_TIMER			600
 #define	RECOVER_TIMER			1000
@@ -267,11 +267,11 @@ enum
 #define	KBD_DISABLE_OFF		0x00
 
 #ifdef JOG_TIMER_TEST
-#define	JOG_VOID_TIME			5000	/* 割込み無効時間(ms) */
+#define	JOG_VOID_TIME			5000	/* IRQ invalidity time(ms) */
 #endif	/* JOG_TIMER_TEST */
 
 /*+-------------------------------------------------------------------------+*/
-/*|	型宣言																	|*/
+/*|	TYPEDEF																	|*/
 /*+-------------------------------------------------------------------------+*/
 typedef struct i2ckybd_record	I2cKbdRec;
 typedef struct i2c_client		I2cClient;
@@ -289,7 +289,7 @@ struct i2ckybd_record
 	int		mnIrqPin;
 	int		(*mpfPinSetupFunc)(void);
 	void	(*mpfPinShutdownFunc)(void);
-	uint8_t	mbIsActive;					/* ステータス(1:動作中/0:停止中) */
+	uint8_t	mbIsActive;					/* Status(1:Active/0:Inactive) */
 	struct delayed_work moCmdQ;
 	WorkStruct moIrqWork;
 	WorkStruct moJogIrqWork;
@@ -303,13 +303,13 @@ struct i2ckybd_record
 	uint16_t	mwPrev[KPD_KEYBUFF_SIZE];
 	uint8_t	mbKbdSleepState;
 	uint8_t	mbJogSleepState;
-	uint8_t	mbAccessState;				/* アクセス状態 */
+	uint8_t	mbAccessState;				/* Access state */
 };
 
 typedef struct
 {
-	uint8_t	mbRegAdr;					/* レジスタアドレス */
-	uint8_t mbData;						/* データ */
+	uint8_t	mbRegAdr;					/* Register address */
+	uint8_t mbData;						/* Data */
 } ShKey_I2cWriteData;
 
 static DEFINE_MUTEX(goKbdAccessMutex);
@@ -317,14 +317,14 @@ static DEFINE_MUTEX(goKbdAccessMutex);
 static I2cKbdRec *gpoKbdRec = NULL;
 
 /*+-------------------------------------------------------------------------+*/
-/*|	テーブル																|*/
+/*|	TABLE																	|*/
 /*+-------------------------------------------------------------------------+*/
 
 static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 {
 					/*      Normal    +Shift     +Alt    +ShiftAlt */
 	KEY_1,			/* 00:[   1    ][   !    ][        ][        ] */
-	KEY_7,			/* 01:[   7    ][   '    ][ マナー ][        ] */
+	KEY_7,			/* 01:[   7    ][   '    ][Manners ][        ] */
 	KEY_Q,			/* 02:[   Q    ][        ][  TAB   ][        ] */
 	KEY_U,			/* 03:[   U    ][        ][        ][        ] */
 	KEY_S,			/* 04:[   S    ][        ][        ][        ] */
@@ -340,13 +340,13 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	0,				/* 0E:                                         */
 	0,				/* 0F:                                         */
 	KEY_2,			/* 10:[   2    ][   "    ][        ][        ] */
-	KEY_8,			/* 11:[   8    ][   (    ][ Vol↑  ][        ] */
+	KEY_8,			/* 11:[   8    ][   (    ][ VolUp  ][        ] */
 	KEY_W,			/* 12:[   W    ][        ][        ][        ] */
 	KEY_I,			/* 13:[   I    ][        ][        ][        ] */
 	KEY_D,			/* 14:[   D    ][        ][        ][        ] */
 	KEY_L,			/* 15:[   L    ][        ][   ;    ][   +    ] */
 	KEY_V,			/* 16:[   V    ][        ][        ][        ] */
-	KEY_CHARACTER,	/* 17:[  文字  ][        ][        ][        ] */
+	KEY_CHARACTER,	/* 17:[Character][       ][        ][        ] */
 	0,				/* 18:                                         */
 	0,				/* 19:                                         */
 	0,				/* 1A:                                         */
@@ -356,14 +356,14 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	0,				/* 1E:                                         */
 	0,				/* 1F:                                         */
 	KEY_3,			/* 20:[   3    ][   #    ][        ][        ] */
-	KEY_9,			/* 21:[   9    ][   )    ][ Vol↓  ][        ] */
+	KEY_9,			/* 21:[   9    ][   )    ][VolDown ][        ] */
 	KEY_E,			/* 22:[   E    ][        ][        ][        ] */
 	KEY_O,			/* 23:[   O    ][        ][        ][        ] */
 	KEY_F,			/* 24:[   F    ][        ][        ][        ] */
 	KEY_SLASH,		/* 25:[   /    ][   ?    ][   :    ][   *    ] */
 	KEY_B,			/* 26:[   B    ][        ][        ][        ] */
-	KEY_SPACE,		/* 27:[スペース][        ][        ][        ] */
-	KEY_BACK,		/* 28:[  戻る  ][        ][        ][        ] */
+	KEY_SPACE,		/* 27:[  SPACE ][        ][        ][        ] */
+	KEY_BACK,		/* 28:[  BACK  ][        ][        ][        ] */
 	0,				/* 29:                                         */
 	0,				/* 2A:                                         */
 	0,				/* 2B:                                         */
@@ -378,7 +378,7 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	KEY_G,			/* 34:[   G    ][        ][        ][        ] */
 	KEY_ENTER,		/* 35:[ Enter  ][        ][Private ][        ] */
 	KEY_N,			/* 36:[   N    ][        ][        ][        ] */
-	KEY_PICTURE,	/* 37:[ 絵・顔 ][        ][        ][        ] */
+	KEY_PICTURE,	/* 37:[Picture ][        ][        ][        ] */
 	KEY_MENU,		/* 38:[  MENU  ][        ][        ][        ] */
 	0,				/* 39:                                         */
 	0,				/* 3A:                                         */
@@ -390,11 +390,11 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	KEY_5,			/* 40:[   5    ][   %    ][        ][        ] */
 	KEY_MINUS,		/* 41:[   -    ][   =    ][   \    ][   _    ] */
 	KEY_T,			/* 42:[   T    ][        ][        ][        ] */
-	KEY_SEARCH,		/* 43:[ サーチ ][   `    ][        ][        ] */
+	KEY_SEARCH,		/* 43:[ SEARCH ][   `    ][        ][        ] */
 	KEY_H,			/* 44:[   H    ][        ][        ][        ] */
 	KEY_Z,			/* 45:[   Z    ][        ][        ][        ] */
 	KEY_M,			/* 46:[   M    ][        ][        ][        ] */
-	KEY_RIGHTSHIFT,	/* 47:[Shift 右][        ][        ][   _    ] */
+	KEY_RIGHTSHIFT,	/* 47:[Shift R ][        ][        ][   _    ] */
 	BTN_MOUSE,		/* 48:[   OK   ][        ][        ][        ] */
 	0,				/* 49:                                         */
 	0,				/* 4A:                                         */
@@ -410,7 +410,7 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	KEY_J,			/* 54:[   J    ][        ][        ][        ] */
 	KEY_X,			/* 55:[   X    ][        ][        ][        ] */
 	KEY_COMMA,		/* 56:[   ,    ][   <    ][   [    ][    {   ] */
-	KEY_HOME,		/* 57:[ ホーム ][        ][        ][        ] */
+	KEY_HOME,		/* 57:[  HOME  ][        ][        ][        ] */
 	0,				/* 58:                                         */
 	0,				/* 59:                                         */
 	0,				/* 5A:                                         */
@@ -420,11 +420,11 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	0,				/* 5E:                                         */
 	0,				/* 5F:                                         */
 #ifdef ROTATE_90
-	KEY_RIGHT,		/* 60:[   ↑   ][        ][  Top   ][        ] */
-	KEY_LEFT,		/* 61:[   ↓   ][        ][ Bottom ][        ] */
+	KEY_RIGHT,		/* 60:[  Up    ][        ][  Top   ][        ] */
+	KEY_LEFT,		/* 61:[  Down  ][        ][ Bottom ][        ] */
 #else
-	KEY_UP,			/* 60:[   ↑   ][        ][  Top   ][        ] */
-	KEY_DOWN,		/* 61:[   ↓   ][        ][ Bottom ][        ] */
+	KEY_UP,			/* 60:[  Up    ][        ][  Top   ][        ] */
+	KEY_DOWN,		/* 61:[  Down  ][        ][ Bottom ][        ] */
 #endif	/* ROTATE_90 */
 	KEY_LEFTALT,	/* 62:[  Alt   ][        ][        ][        ] */
 	0,				/* 63:                                         */
@@ -441,13 +441,13 @@ static const uint16_t gwShKeyTable[KPD_KEY_MAX] =
 	0,				/* 6E:                                         */
 	0,				/* 6F:                                         */
 #ifdef ROTATE_90
-	KEY_UP,			/* 70:[   ←   ][        ][  Home  ][        ] */
-	KEY_DOWN,		/* 71:[   →   ][        ][  End   ][        ] */
+	KEY_UP,			/* 70:[  Left  ][        ][  Home  ][        ] */
+	KEY_DOWN,		/* 71:[  Right ][        ][  End   ][        ] */
 #else
-	KEY_LEFT,		/* 70:[   ←   ][        ][  Home  ][        ] */
-	KEY_RIGHT,		/* 71:[   →   ][        ][  End   ][        ] */
+	KEY_LEFT,		/* 70:[  Left  ][        ][  Home  ][        ] */
+	KEY_RIGHT,		/* 71:[  Right ][        ][  End   ][        ] */
 #endif	/* ROTATE_90 */
-	KEY_LEFTSHIFT,	/* 72:[Shift 左][        ][        ][        ] */
+	KEY_LEFTSHIFT,	/* 72:[Shift L ][        ][        ][        ] */
 	0,				/* 73:                                         */
 	0,				/* 74:                                         */
 	0,				/* 75:                                         */
@@ -467,10 +467,10 @@ static const ShKey_I2cWriteData goInitData[] =
 	{
 		{	KPD_CLKEN,			0x00},
 #if 1
-												/* SYSCLK=16分周(125KHz) */
+												/* SYSCLK=16freq(125KHz) */
 		{	KPD_CLKCFG,			KPD_CLKCFG_CLKSRCSEL | 0x04},
 #else
-												/* SYSCLK= 1分周(2MHz) */
+												/* SYSCLK= 1freq(2MHz) */
 		{	KPD_CLKCFG,			KPD_CLKCFG_CLKSRCSEL | 0x00},
 #endif
 		{	KPD_CLKMODE,		KPD_CLKMODE_MODCTL},
@@ -487,41 +487,41 @@ static const ShKey_I2cWriteData goInitData[] =
 		{	KPD_KBDDEDCFG_H,	0xFF},
 		{	KPD_KBDDEDCFG_L,	0xFF},
 		{	KPD_KBDMSK,			KPD_KBDMSK_MSKELNT | KPD_KBDMSK_MSKEINT | KPD_KBDMSK_MSKKLI},
-		{	0xFF,				0x00},			/* 終端 */
+		{	0xFF,				0x00},			/* Terminal */
 	};
-/* スリープ突入時の設定 */
+/* Set Sleep */
 static const ShKey_I2cWriteData goSleepData[] =
 	{
-		{	KPD_AUTOSLPENA,		0x00},			/* オートスリープ解除 */
-		{	KPD_CLKMODE,		0x00},			/* クロック停止 */
-		{	0xFF,				0x00},			/* 終端 */
+		{	KPD_AUTOSLPENA,		0x00},			/* Auto sleep release */
+		{	KPD_CLKMODE,		0x00},			/* Clock stop */
+		{	0xFF,				0x00},			/* Terminal */
 	};
-/* ウェイクアップ時の設定 */
+/* Set Wake up */
 static const ShKey_I2cWriteData goWakeupData[] =
 	{
-												/* クロック再開 */
+												/* Clock restart */
 		{	KPD_CLKMODE,		KPD_CLKMODE_MODCTL},
-												/* I2C通信でウェイクアップ */
+												/* I2C Wake up */
 		{	KPD_I2CWAKEUPEN,	KPD_I2CWAKEUPEN_I2CWEN},
-		{	KPD_AUTOSLPTIMER1,	0xFF},			/* (下位8Bits) */
-		{	KPD_AUTOSLPTIMER2,	0x07},			/* (上位8Bits) */
-		{	KPD_GPIOWAKE2,		0x00},			/* IRQ,KPY10～8 */
-		{	KPD_GPIOWAKE1,		0x00},			/* KPY7～KPY0 */
-		{	KPD_GPIOWAKE0,		0xFF},			/* KPX7～KPX0 */
-												/* オートスリープ有効 */
+		{	KPD_AUTOSLPTIMER1,	0xFF},			/* (Low  8Bits) */
+		{	KPD_AUTOSLPTIMER2,	0x07},			/* (High 8Bits) */
+		{	KPD_GPIOWAKE2,		0x00},			/* IRQ,KPY10~8 */
+		{	KPD_GPIOWAKE1,		0x00},			/* KPY7~KPY0 */
+		{	KPD_GPIOWAKE0,		0xFF},			/* KPX7~KPX0 */
+												/* Auto sleep enable */
 		{	KPD_AUTOSLPENA,		KPD_AUTOSLPENA_ENABLE},
-		{	0xFF,				0x00},			/* 終端 */
+		{	0xFF,				0x00},			/* Terminal */
 	};
 
 /*+-------------------------------------------------------------------------+*/
-/*|	プロトタイプ宣言														|*/
+/*|	PROTO TYPE DECLARE														|*/
 /*+-------------------------------------------------------------------------+*/
-/* I2Cアクセス */
+/* I2C access */
 static int ShKey_I2cRead(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, uint32_t dwLen);
 static int ShKey_I2cWriteOne(I2cClient *poClient, uint8_t bRegAdr, uint8_t bData);
 static int ShKey_I2cWriteAny(I2cClient *poClient, const ShKey_I2cWriteData *poData);
 
-/* キードライバ */
+/* Key Driver */
 static int __init ShKey_Init(void);
 static void __exit ShKey_Exit(void);
 static int __devinit ShKey_Probe(I2cClient *poClient, const I2cDevID *poDevId);
@@ -559,10 +559,10 @@ static unsigned long gettimeofday_msec(void);
 #endif /* JOG_TIMER_TEST */
 
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cアクセス																|*/
+/*|	I2C ACCESS																|*/
 /*+-------------------------------------------------------------------------+*/
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cリード																|*/
+/*|	I2C READ																|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShKey_I2cRead(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, uint32_t dwLen)
 {
@@ -599,7 +599,7 @@ static int ShKey_I2cRead(I2cClient *poClient, uint8_t bRegAdr, uint8_t *pbBuf, u
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	I2Cライト																|*/
+/*|	I2C WRITE																|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShKey_I2cWriteOne(I2cClient *poClient, uint8_t bRegAdr, uint8_t bData)
 {
@@ -636,7 +636,7 @@ static int ShKey_I2cWriteAny(I2cClient *poClient, const ShKey_I2cWriteData *poDa
 	int nI;
 	int nResult;
 
-	/* 設定を行う */
+	/* Set */
 	for(nI = 0; poData[nI].mbRegAdr != 0xFF; nI++)
 	{
 		nResult = ShKey_I2cWriteOne(poClient, poData[nI].mbRegAdr, poData[nI].mbData);
@@ -763,7 +763,7 @@ module_init(KbdIf_Setup);
 module_exit(KbdIf_Cleanup);
 
 /*+-------------------------------------------------------------------------+*/
-/*|	キーボードドライバ														|*/
+/*|	KEYBOARD DRIVER															|*/
 /*+-------------------------------------------------------------------------+*/
 module_init(ShKey_Init);
 module_exit(ShKey_Exit);
@@ -780,7 +780,7 @@ static const I2cDevID gI2cDevIdTable[] =
 
 MODULE_DEVICE_TABLE(i2c, gI2cDevIdTable);
 
-/* I2Cドライバ呼び出し用構造体 */
+/* Structure */
 static struct i2c_driver goI2cKbdDriver =
 {
 	.driver =
@@ -798,19 +798,19 @@ static struct i2c_driver goI2cKbdDriver =
 static int __init ShKey_Init(void)
 {
 printk(KERN_DEBUG "[ShKey]Init(PID:%ld)\n", sys_getpid());
-	/* I2Cドライバ利用開始 */
+	/* I2C driver use start */
 	return i2c_add_driver(&goI2cKbdDriver);
 }
 
 static void __exit ShKey_Exit(void)
 {
 printk(KERN_DEBUG "[ShKey]Exit(PID:%ld)\n", sys_getpid());
-	/* I2Cドライバ利用終了 */
+	/* I2C driver use stop */
 	i2c_del_driver(&goI2cKbdDriver);
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	キードライバ起動														|*/
+/*|	KEY DRIVER START														|*/
 /*+-------------------------------------------------------------------------+*/
 static int __devinit ShKey_Probe(I2cClient *poClient, const I2cDevID *poDevId)
 {
@@ -824,7 +824,7 @@ printk(KERN_DEBUG "[ShKey]Probe(PID:%ld)\n", sys_getpid());
 		dev_err(&poClient->dev, "keyboard platform device data is required\n");
 		return -ENODEV;
 	}
-	/* キードライバ情報用メモリを確保する */
+	/* Memory securing */
 	poKbdRec = kzalloc(sizeof(I2cKbdRec), GFP_KERNEL);
 	if(!poKbdRec)
 	{
@@ -834,7 +834,7 @@ printk(KERN_DEBUG "[ShKey]Probe(PID:%ld)\n", sys_getpid());
 	i2c_set_clientdata(poClient, poKbdRec);
 	poKbdRec->mpoClient			 = poClient;
 	poSetupData					 = poClient->dev.platform_data;
-	/* セットアップ情報を得る(board-xxxx.cで定義している) */
+	/* Get setup info (board-xxxx.c) */
 	poKbdRec->mnIrqPin			 = poSetupData->gpio_kbdirq;
 	poKbdRec->mpfPinSetupFunc	 = poSetupData->gpio_setup;
 	poKbdRec->mpfPinShutdownFunc = poSetupData->gpio_shutdown;
@@ -847,12 +847,12 @@ printk(KERN_DEBUG "[ShKey]Probe(PID:%ld)\n", sys_getpid());
 	poKbdRec->mdwPrev			 = gettimeofday_msec();
 	poKbdRec->mdwInterval		 = JOG_VOID_TIME;
 #endif /* JOG_TIMER_TEST */
-	/* グローバル変数に登録しておく */
+	/* Set globalvariable */
 	gpoKbdRec = poKbdRec;
 	poKbdRec->mbAccessState		 = 0;
 	poKbdRec->mbKbdSleepState	 = 0;
 	poKbdRec->mbJogSleepState	 = 0;
-	/* GPIO設定を行う */
+	/* GPIO Setting */
 	if(0 == (nResult = ShKey_ConfigGPIO(poKbdRec)))
 	{
 		INIT_WORK(&poKbdRec->moIrqWork, ShKey_FetchKeys);
@@ -865,14 +865,14 @@ printk(KERN_DEBUG "[ShKey]Probe(PID:%ld)\n", sys_getpid());
 		device_init_wakeup(&poClient->dev, 1);
 		return 0;
 	}
-	/* GPIOの解放 */
+	/* GPIO Liberating */
 	ShKey_ReleaseGPIO(poKbdRec);
 	kfree(poKbdRec);
 	return nResult;
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	キードライバ切り離し													|*/
+/*|	KEY DRIVER Remove														|*/
 /*+-------------------------------------------------------------------------+*/
 static int __devexit ShKey_Remove(I2cClient *poClient)
 {
@@ -896,7 +896,7 @@ printk(KERN_DEBUG "[ShKey]Remove(PID:%ld)\n", sys_getpid());
 
 #ifdef CONFIG_PM
 /*+-------------------------------------------------------------------------+*/
-/*|	キードライバサスペンド													|*/
+/*|	KEY DRIVER SUSPEND														|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShKey_Suspend(I2cClient *poClient, pm_message_t oMsg)
 {
@@ -911,7 +911,7 @@ printk(KERN_DEBUG "[ShKey]Suspend(PID:%ld)\n", sys_getpid());
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	キードライバレジューム													|*/
+/*|	KEY DRIVER RESUME														|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShKey_Resume(I2cClient *poClient)
 {
@@ -934,7 +934,7 @@ static int ShKey_Command(I2cClient *poClient, unsigned int wCmd, void *pArg)
 #ifdef KBD_DEBPRN
 printk(KERN_DEBUG "[ShKey]Command(PID:%ld,CMD:%d,ARG:%lx)\n", sys_getpid(), wCmd, (long)pArg);
 #endif	/* KBD_DEBPRN */
-	/* デバイスがオープンされていないなら */
+	/* Device not opened */
 	if(poKbdRec->mbIsActive == 0)
 		return -2;
 	switch(wCmd)
@@ -1015,7 +1015,7 @@ printk(KERN_DEBUG "[ShKey]CreateInputDev(PID:%ld)\n", sys_getpid());
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	GPIOの設定																|*/
+/*|	GPIO SETTING															|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShKey_ConfigGPIO(I2cKbdRec *poKbdRec)
 {
@@ -1025,13 +1025,13 @@ static int ShKey_ConfigGPIO(I2cKbdRec *poKbdRec)
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	GPIOの解放																|*/
+/*|	GPIO LIBERATING															|*/
 /*+-------------------------------------------------------------------------+*/
 static int ShKey_ReleaseGPIO(I2cKbdRec *poKbdRec)
 {
 	if(poKbdRec == NULL)
 		return -EINVAL;
-	/* GPIOの解放 */
+	/* GPIO Liberating */
 	dev_info(&poKbdRec->mpoClient->dev, "releasing keyboard gpio pins %d\n", poKbdRec->mnIrqPin);
 	poKbdRec->mpfPinShutdownFunc();
 	return 0;
@@ -1059,11 +1059,11 @@ printk(KERN_DEBUG "[ShKey]CloseCB(PID:%ld)\n", sys_getpid());
 static void ShKey_Shutdown(I2cKbdRec *poKbdRec)
 {
 printk(KERN_DEBUG "[ShKey]Shutdown(PID:%ld)\n", sys_getpid());
-	/* 動作中なら */
+	/* Active */
 	if(poKbdRec->mbIsActive)
 	{
 		ShKey_Stop(poKbdRec);
-		/* ワークメモリ解放 */
+		/* Work memory liberating */
 		flush_work(&poKbdRec->moIrqWork);
 		flush_work(&poKbdRec->moJogIrqWork);
 	}
@@ -1078,7 +1078,7 @@ static int ShKey_Start(I2cKbdRec *poKbdRec)
 
 printk(KERN_DEBUG "[ShKey]Start(PID:%ld)\n", sys_getpid());
 	mutex_lock(&goKbdAccessMutex);
-	/* 停止中にする */
+	/* Inactive */
 	poKbdRec->mbIsActive = 0;
 	nResult = ShKey_I2cWriteAny(poClient, goInitData);
 	if(nResult < 0)
@@ -1087,7 +1087,7 @@ printk(KERN_DEBUG "[ShKey]Start-->Error\n");
 		mutex_unlock(&goKbdAccessMutex);
 		return -EIO;
 	}
-	/* 割込みハンドラの登録 */
+	/* Set Irq */
 	nResult = request_irq(MSM_GPIO_TO_INT(poKbdRec->mnIrqPin), &ShKey_IrqHandler,
 						 IRQF_TRIGGER_LOW | IRQF_DISABLED,
 					     SH_KBD_I2C_DEVNAME, poKbdRec);
@@ -1099,10 +1099,10 @@ printk(KERN_DEBUG "[ShKey]Start-->Error\n");
 	}
 	for(nI = 0; nI < 4; nI++)
 	{
-		/* 現在値を保存 */
+		/* Value preservation */
 		poKbdRec->mnJogVal[nI] = gpio_get_value(poKbdRec->mnJogIrqPin[nI]);
 		nTrigger = (poKbdRec->mnJogVal[nI] == 0 ? IRQF_TRIGGER_HIGH : IRQF_TRIGGER_LOW) | IRQF_DISABLED;
-		/* 割込み設定 */
+		/* Set Irq */
 		nResult = request_irq(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[nI]),
 						 &ShKey_JogHandler, nTrigger, SH_KBD_I2C_DEVNAME, poKbdRec);
 		if(nResult < 0)
@@ -1113,7 +1113,7 @@ printk(KERN_DEBUG "[ShKey]Start-->Error\n");
 			return -EIO;
 		}
 	}
-	/* 動作中にする */
+	/* Set Active */
 	poKbdRec->mbIsActive = 1;
 	ShKey_SetState(poKbdRec, KBD_DISABLE_API, KBD_DISABLE_OFF, 0, 1);
 	mutex_unlock(&goKbdAccessMutex);
@@ -1124,9 +1124,9 @@ static void ShKey_Stop(I2cKbdRec *poKbdRec)
 {
 printk(KERN_DEBUG "[ShKey]Stop(PID:%ld)\n", sys_getpid());
 	mutex_lock(&goKbdAccessMutex);
-	/* 停止中にする */
+	/* Inactive */
 	poKbdRec->mbIsActive = 0;
-	/* 割込み登録解除 */
+	/* Irq release */
 	free_irq(MSM_GPIO_TO_INT(poKbdRec->mnIrqPin), poKbdRec);
 	free_irq(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[0]), poKbdRec);
 	free_irq(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[1]), poKbdRec);
@@ -1136,7 +1136,7 @@ printk(KERN_DEBUG "[ShKey]Stop(PID:%ld)\n", sys_getpid());
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	IRQハンドラ																|*/
+/*|	IRQ HANDLER																|*/
 /*+-------------------------------------------------------------------------+*/
 static irqreturn_t ShKey_IrqHandler(int nIrq, void *pvDevId)
 {
@@ -1156,10 +1156,10 @@ static irqreturn_t ShKey_JogHandler(int nIrq, void *pvDevId)
 //printk(KERN_DEBUG "[ShKey]JogHandler(PID:%ld,IRQ:%02X)\n", sys_getpid(), nIrq);
 	for(nI = 0; nI < 4; nI++)
 	{
-		/* ４方向とも割込み禁止 */
+		/* Irq disable */
 		disable_irq_nosync(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[nI]));
 	}
-	/* 割込みハンドラ実行 */
+	/* Irq handler execution */
 	schedule_work(&poKbdRec->moJogIrqWork);
 	return IRQ_HANDLED;
 }
@@ -1170,12 +1170,12 @@ static void ShKey_EnableJogInt(I2cKbdRec *poKbdRec)
 
 	for(nI = 0; nI < 4; nI++)
 	{
-		/* 現在値を保存 */
+		/* Set value */
 		poKbdRec->mnJogVal[nI] = gpio_get_value(poKbdRec->mnJogIrqPin[nI]);
 		nTrigger = (poKbdRec->mnJogVal[nI] == 0 ? IRQF_TRIGGER_HIGH : IRQF_TRIGGER_LOW) | IRQF_DISABLED;
-		/* 割込みトリガの設定変更 */
+		/* Set Irq Trigger */
 		set_irq_type(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[nI]), nTrigger);
-		/* 割込み許可 */
+		/* Irq Enable */
 		enable_irq(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[nI]));
 	}
 }
@@ -1205,20 +1205,20 @@ static void ShKey_NotifyKeyCode(I2cKbdRec *poKbdRec, InputDev *pInDev, uint8_t *
 	int nCnt;
 	int wCode[KPD_KEYBUFF_SIZE];
 
-	/* 停止中なら何もしない */
+	/* Inactive */
 	if(!poKbdRec->mbIsActive)
 	{
 		return;
 	}
 	nCnt = 0;
-	/* キーバッファ分ループ */
+	/* Loop */
 	for(nI = 0; nI < KPD_KEYBUFF_SIZE; nI++)
 	{
-		/* キーが押されているなら */
+		/* key push */
 		if(pbCode[nI] != KPD_INVALID_KEY)
 		{
 			wCode[nI] = gwShKeyTable[pbCode[nI] & 0x7f];
-			/* 前回から押したままかをチェック */
+			/* puch checked */
 			for(nJ = 0; nJ < KPD_KEYBUFF_SIZE; nJ++)
 			{
 				if(poKbdRec->mwPrev[nJ] == wCode[nI])
@@ -1226,7 +1226,7 @@ static void ShKey_NotifyKeyCode(I2cKbdRec *poKbdRec, InputDev *pInDev, uint8_t *
 					break;
 				}
 			}
-			/* 新しく押下した */
+			/* New key */
 			if(nJ == KPD_KEYBUFF_SIZE)
 			{
 				lCode = (long)wCode[nI];
@@ -1238,7 +1238,7 @@ printk(KERN_DEBUG "[ShKey]Key Press  <%3ld>\n", lCode);
 			}
 			else
 			{
-				/* 押し続けているキーはバッファから消去 */
+				/* deleted */
 				poKbdRec->mwPrev[nJ] = KEY_RESERVED;
 			}
 		}
@@ -1247,10 +1247,10 @@ printk(KERN_DEBUG "[ShKey]Key Press  <%3ld>\n", lCode);
 			wCode[nI] = KEY_RESERVED;
 		}
 	}
-	/* キーバッファ分ループ */
+	/* Loop */
 	for(nJ = 0; nJ < KPD_KEYBUFF_SIZE; nJ++)
 	{
-		/* 前回通知時にキー押しで今回キー押し判定ではない場合は離したと判断する */
+		/* judged key release */
 		if(poKbdRec->mwPrev[nJ] != KEY_RESERVED)
 		{
 			lCode = (long)poKbdRec->mwPrev[nJ];
@@ -1265,10 +1265,10 @@ printk(KERN_DEBUG "[ShKey]Key Release<%3ld>\n", lCode);
 	{
 		input_sync(pInDev);
 	}
-	/* キーバッファ分ループ */
+	/* Loop */
 	for(nI = 0; nI < KPD_KEYBUFF_SIZE; nI++)
 	{
-		/* 今回押下キーを記録 */
+		/* Pressing key record */
 		poKbdRec->mwPrev[nI] = wCode[nI];
 	}
 }
@@ -1288,7 +1288,7 @@ static void ShKey_FetchKeys(WorkStruct *poWork)
 	}
 	else
 	{
-		/* 次の割り込み許可 */
+		/* Irq Enable */
 		enable_irq(MSM_GPIO_TO_INT(poKbdRec->mnIrqPin));
 	}
 	mutex_unlock(&goKbdAccessMutex);
@@ -1303,7 +1303,7 @@ static int ShKey_FetchKeysMain(I2cKbdRec *poKbdRec)
 	uint8_t bKey[KPD_KEYBUFF_SIZE];
 	uint8_t bEvt = 0x00;
 
-	/* ステータスレジスタの読み込み */
+	/* Read status */
 	if(0 != ShKey_I2cRead(poClient, KPD_IRQST, &bIRQST, 1))
 	{
 printk(KERN_DEBUG "[ShKey]i2c read error\n");
@@ -1312,18 +1312,18 @@ printk(KERN_DEBUG "[ShKey]i2c read error\n");
 	if(bIRQST & KPD_IRQST_PORIRQ)
 	{
 //printk(KERN_DEBUG "[ShKey]IRQST %02X\n", bIRQST);
-		/* パワーオンリセットを実行 */
+		/* Power-on reset */
 		ShKey_I2cWriteOne(poClient, KPD_RSTINTCLR, KPD_RSTINTCLR_IRQCLR);
 printk(KERN_DEBUG "[ShKey]KPD_RSTINTCLR(%02X)<<%02X\n", KPD_RSTINTCLR, KPD_RSTINTCLR_IRQCLR);
 	}
 	else if(bIRQST & KPD_IRQST_KBDIRQ)
 	{
-		/* クロック停止中なら以下のレジスタにアクセスできないのでここで止める */
+		/* clock stop */
 		if(poKbdRec->mbKbdSleepState != 0)
 		{
 			return 0;
 		}
-		/* ステータスレジスタを読み込む */
+		/* Read status */
 		if(0 != ShKey_I2cRead(poClient, KPD_KBDMIS, &bKBDMIS, 1))
 		{
 printk(KERN_DEBUG "[ShKey]i2c read error\n");
@@ -1350,13 +1350,13 @@ printk(KERN_DEBUG "[ShKey]IRQST %02X KBDMIS %02X\n", bIRQST, bKBDMIS);
 		}
 		if(bKBDMIS & KPD_KBDMIS_MSINT)
 		{
-			/* キーコードレジスタを読み込む */
+			/* Read key code */
 			if(0 != ShKey_I2cRead(poClient, KPD_KEYCODE0, bKey, KPD_KEYBUFF_SIZE))
 			{
 printk(KERN_DEBUG "[ShKey]i2c read error\n");
 				return -1;
 			}
-			/* 通知する */
+			/* Notifies */
 			ShKey_NotifyKeyCode(poKbdRec, pInDev, bKey);
 		}
 	}
@@ -1371,11 +1371,11 @@ printk(KERN_DEBUG "[ShKey]Other IRQ(%02X)\n", bIRQST);
 static void ShKey_FetchJog(WorkStruct *poWork)
 {
 #ifdef ROTATE_90
-								/*		上			下			左			右	*/
+								/*		Up			Down		Left		Right	*/
 	static const int nMoveX[4] = {	 REL_STEP,	-REL_STEP,			0,	 		0};
 	static const int nMoveY[4] = {			0,	 		0,	-REL_STEP,	 REL_STEP};
 #else
-								/*		上			下			左			右	*/
+								/*		Up			Down		Left		Right	*/
 	static const int nMoveX[4] = {			0,			0,	-REL_STEP,	 REL_STEP};
 	static const int nMoveY[4] = {	-REL_STEP,	 REL_STEP,			0,			0};
 #endif	/* ROTATE_90 */
@@ -1396,9 +1396,9 @@ static void ShKey_FetchJog(WorkStruct *poWork)
 	nX = nY = 0;
 	for(nI = 0; nI < 4; nI++)
 	{
-		/* 現在値を読み込む */
+		/* Get value */
 		nVal = gpio_get_value(poKbdRec->mnJogIrqPin[nI]);
-		/* 前回値と異なるなら */
+		/* Difference */
 		if(nVal != poKbdRec->mnJogVal[nI])
 		{
 			nX += nMoveX[nI];
@@ -1406,7 +1406,7 @@ static void ShKey_FetchJog(WorkStruct *poWork)
 		}
 	}
 #ifdef JOG_TIMER_TEST
-	/* 前回イベントからの時刻が一定以上なら無視する */
+	/* It disregards it more than constancy time from the last event. */
 	if((dwNow - poKbdRec->mdwPrev) > poKbdRec->mdwInterval)
 	{
 #ifdef KBD_DEBPRN
@@ -1438,7 +1438,7 @@ printk(KERN_DEBUG "[ShKey]REL_Y<%d>\n", nY);
 	}
 	poKbdRec->mdwPrev = dwNow;
 #endif /* JOG_TIMER_TEST */
-	/* 次の割り込み許可 */
+	/* Irq enable */
 	ShKey_EnableJogInt(poKbdRec);
 	mutex_unlock(&goKbdAccessMutex);
 }
@@ -1453,7 +1453,7 @@ static int ShKey_SetState(I2cKbdRec *poKbdRec, uint8_t bMask, uint8_t bValue, ui
 #ifdef KBD_DEBPRN
 printk(KERN_DEBUG "[ShKey]SetState[%02X]->[%02X]\n", poKbdRec->mbAccessState, bNew);
 #endif	/* KBD_DEBPRN */
-	/* ２重チェックありなら */
+	/* double check */
 	if(bCheck)
 	{
 		if((poKbdRec->mbAccessState & bMask) == bValue)
@@ -1462,11 +1462,11 @@ printk(KERN_DEBUG "[ShKey]StateCheck NG\n");
 			return -2;
 		}
 	}
-	/* 状態を記録する */
+	/* State record */
 	poKbdRec->mbAccessState = bNew;
 	if(poKbdRec->mbIsActive)
 	{
-		/* Enable+フリップ開きなら */
+		/* Enable+FlipOpen */
 		if((poKbdRec->mbAccessState & (KBD_DISABLE_API | KBD_DISABLE_FLIP)) == 0)
 		{
 			nResult = ShKey_SetKbdSleep(poKbdRec, 0, nIsFirst);
@@ -1477,7 +1477,7 @@ printk(KERN_DEBUG "[ShKey]StateCheck NG\n");
 		}
 		if(nResult == 0)
 		{
-			/* Enable+Sleep非指定なら */
+			/* Enable+Sleep Non-Specification */
 			if((poKbdRec->mbAccessState & (KBD_DISABLE_API | KBD_DISABLE_SLEEP)) == 0)
 			{
 				nResult = ShKey_SetJogSleep(poKbdRec, 0, nIsFirst);
@@ -1500,43 +1500,43 @@ static int ShKey_SetKbdSleep(I2cKbdRec *poKbdRec, int nIsSleep, int nIsFirst)
 #ifdef KBD_DEBPRN
 printk(KERN_DEBUG "[ShKey]SetKbdSleep<%d>\n", nIsSleep);
 #endif	/* KBD_DEBPRN */
-	/* 初回設定なら */
+	/* Setting first time */
 	if(nIsFirst)
 	{
-		/* スリープなら */
+		/* sleeping */
 		if(nIsSleep == 1)
 		{
-			/* 割り込み禁止 */
+			/* Irq disable */
 			disable_irq(MSM_GPIO_TO_INT(poKbdRec->mnIrqPin));
-			/* スリープ設定 */
+			/* Sleep setting */
 			nResult = ShKey_I2cWriteAny(poClient, goSleepData);
 		}
-		/* 起動なら(割込み設定は不要) */
+		/* Start */
 		else
 		{
-			/* 起動設定 */
+			/* Start setting */
 			nResult = ShKey_I2cWriteAny(poClient, goWakeupData);
 		}
 	}
 	else
 	{
-		/* 現在の状態と異なるなら */
+		/* Differs from the state */
 		if(poKbdRec->mbKbdSleepState != (uint8_t)nIsSleep)
 		{
-			/* スリープなら */
+			/* sleeping */
 			if(nIsSleep == 1)
 			{
-				/* 割り込み禁止 */
+				/* Irq disable */
 				disable_irq(MSM_GPIO_TO_INT(poKbdRec->mnIrqPin));
-				/* スリープ設定 */
+				/* Sleep setting */
 				nResult = ShKey_I2cWriteAny(poClient, goSleepData);
 			}
-			/* 起動なら */
+			/* Start */
 			else
 			{
-				/* 起動設定 */
+				/* Start setting */
 				nResult = ShKey_I2cWriteAny(poClient, goWakeupData);
-				/* 割り込み解除 */
+				/* Irq Enable */
 				enable_irq(MSM_GPIO_TO_INT(poKbdRec->mnIrqPin));
 			}
 		}
@@ -1553,25 +1553,25 @@ static int ShKey_SetJogSleep(I2cKbdRec *poKbdRec, int nIsSleep, int nIsFirst)
 #ifdef KBD_DEBPRN
 printk(KERN_DEBUG "[ShKey]SetJogSleep<%d>\n", nIsSleep);
 #endif	/* KBD_DEBPRN */
-	/* 初回設定なら */
+	/* Setting first time */
 	if(nIsFirst)
 	{
-		/* スリープなら */
+		/* sleeping */
 		if(nIsSleep == 1)
 		{
 			for(nI = 0; nI < 4; nI++)
 			{
-				/* ４方向とも割込み禁止 */
+				/* Irq disable */
 				disable_irq(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[nI]));
 				gpio_tlmm_config(GPIO_CFG(poKbdRec->mnJogIrqPin[nI], 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_2MA), GPIO_ENABLE);
 			}
-			/* ホールIC電源オフ */
+			/* IC power-off */
 			gpio_direction_output(poKbdRec->mnJogPowPin, 1);
 		}
-		/* 起動なら(割込み設定は不要) */
+		/* Start */
 		else
 		{
-			/* ホールIC電源オン */
+			/* IC power-on */
 			gpio_direction_output(poKbdRec->mnJogPowPin, 0);
 			for(nI = 0; nI < 4; nI++)
 			{
@@ -1581,31 +1581,31 @@ printk(KERN_DEBUG "[ShKey]SetJogSleep<%d>\n", nIsSleep);
 	}
 	else
 	{
-		/* 現在の状態と異なるなら */
+		/* Differs from the state */
 		if(poKbdRec->mbJogSleepState != (uint8_t)nIsSleep)
 		{
-			/* スリープなら */
+			/* sleeping */
 			if(nIsSleep == 1)
 			{
 				for(nI = 0; nI < 4; nI++)
 				{
-					/* ４方向とも割込み禁止 */
+					/* Irq disable */
 					disable_irq(MSM_GPIO_TO_INT(poKbdRec->mnJogIrqPin[nI]));
 					gpio_tlmm_config(GPIO_CFG(poKbdRec->mnJogIrqPin[nI], 0, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_2MA), GPIO_ENABLE);
 				}
-				/* ホールIC電源オフ */
+				/* IC power-off */
 				gpio_direction_output(poKbdRec->mnJogPowPin, 1);
 			}
-			/* 起動なら */
+			/* Start */
 			else
 			{
-				/* ホールIC電源オン */
+				/* IC power-on */
 				gpio_direction_output(poKbdRec->mnJogPowPin, 0);
 				for(nI = 0; nI < 4; nI++)
 				{
 					gpio_tlmm_config(GPIO_CFG(poKbdRec->mnJogIrqPin[nI], 0, GPIO_INPUT, GPIO_PULL_UP, GPIO_2MA), GPIO_ENABLE);
 				}
-				/* 割り込み解除 */
+				/* Irq enable */
 				ShKey_EnableJogInt(poKbdRec);
 			}
 		}
@@ -1615,14 +1615,14 @@ printk(KERN_DEBUG "[ShKey]SetJogSleep<%d>\n", nIsSleep);
 }
 
 /*+-------------------------------------------------------------------------+*/
-/*|	外部公開I/F																|*/
+/*|	PUBLIC FUNCTION 														|*/
 /*+-------------------------------------------------------------------------+*/
 void msm_i2ckbd_flipchange(int nFlipState)
 {
 	mutex_lock(&goKbdAccessMutex);
 	if(gpoKbdRec != NULL)
 	{
-		/* フリップオープンなら */
+		/* Flip open */
 		if(nFlipState == 0x00)
 			ShKey_SetState(gpoKbdRec, KBD_DISABLE_FLIP, KBD_DISABLE_OFF, 0, 0);
 		else
@@ -1636,7 +1636,7 @@ void msm_i2ckbd_setsleep(int nIsSleep)
 	mutex_lock(&goKbdAccessMutex);
 	if(gpoKbdRec != NULL)
 	{
-		/* スリープ解除なら */
+		/* Sleep release */
 		if(nIsSleep == 0x00)
 			ShKey_SetState(gpoKbdRec, KBD_DISABLE_SLEEP, KBD_DISABLE_OFF, 0, 0);
 		else

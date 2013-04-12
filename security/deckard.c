@@ -21,6 +21,8 @@
 #include <linux/mount.h>
 #include <linux/mnt_namespace.h>
 #include <linux/fs_struct.h>
+#include <linux/net.h>
+#include <linux/netfilter_ipv4/ip_tables.h>
 
 static int deckard_ptrace_may_access(struct task_struct *child, unsigned int mode)
 {
@@ -139,11 +141,21 @@ static int _xx_realpath_from_path(struct path *path, char *newname,
 #define CONFIG_SECURITY_DECKARD_SYSTEM_DEV_PATH "/dev/block/mtdblock5"
 #endif
 
+#ifndef CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MAJOR
+#define CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MAJOR (31)
+#endif /* ! CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MAJOR */
+
+#ifndef CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MINOR
+#define CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MINOR (5)
+#endif /* ! CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MINOR */
+
 static int deckard_sb_mount(char *dev_name, struct path *path,
 			    char *type, unsigned long flags, void *data)
 {
 	static char realpath[PATH_MAX];
 	int r;
+	struct block_device* bdev;
+	unsigned char major, minor;
 
 	r = _xx_realpath_from_path(path, realpath, PATH_MAX-1);
 	if (r != 0) return r;
@@ -155,6 +167,34 @@ static int deckard_sb_mount(char *dev_name, struct path *path,
 	      printk(KERN_ERR "%s: REJECT dev_name=%s realpath=%s\n",
 		     __FUNCTION__, dev_name, realpath);
 	      return -EPERM;
+	    }
+	    else {
+	      if (flags & MS_BIND) {
+	        printk(KERN_ERR "%s: REJECT dev_name=%s realpath=%s loopback mount\n",
+	            __FUNCTION__, dev_name, realpath);
+
+	        return -EPERM;
+	      }
+
+	      bdev = lookup_bdev((const char*)dev_name);
+
+	      if( bdev == NULL ) {
+	        printk("cannot lookup\n");
+
+	        return -EPERM;
+	      }
+
+	      major = MAJOR(bdev->bd_dev);
+	      minor = MINOR(bdev->bd_dev);
+
+	      bdput(bdev);
+
+	      if((major != CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MAJOR) || (minor != CONFIG_SECURITY_DECKARD_SYSTEM_DEV_MINOR)) {
+	        printk(KERN_ERR "%s: REJECT dev_name=%s realpath=%s mismatch major or minor\n",
+	            __FUNCTION__, dev_name, realpath);
+
+	        return -EPERM;
+	      }
 	    }
 	  }
 	  else {
@@ -283,6 +323,124 @@ static int deckard_path_chroot(struct path *path)
 #endif
 }
 
+#define LOCAL_DECKARD_GUESS_PATH_MAX_LEN (128)
+
+static char* deckard_guess_binary(struct task_struct* t, char* buf, int len)
+{
+	struct vm_area_struct* vm_area;
+	struct file* file;
+	char tmp[LOCAL_DECKARD_GUESS_PATH_MAX_LEN + 1];
+	char* p = NULL;
+	char* q = NULL;
+	int i;
+
+	read_lock(&tasklist_lock);
+
+	if(t && t->mm && t->mm->mmap)
+	{
+		vm_area = t->mm->mmap;
+
+		for(i = 0; i < t->mm->map_count; i++)
+		{
+			if(!vm_area)
+			{
+				break;
+			}
+
+			file = vm_area->vm_file;
+
+			if(file)
+			{
+				memset(tmp, 0, LOCAL_DECKARD_GUESS_PATH_MAX_LEN + 1);
+
+				p = d_path(&file->f_path, tmp, LOCAL_DECKARD_GUESS_PATH_MAX_LEN);
+
+				if(p == NULL || (long)p == ENAMETOOLONG)
+				{
+					vm_area = vm_area->vm_next;
+
+					continue;
+				}
+
+				if(p[0] == '/')
+				{
+					strncpy(buf, p, len);
+
+					q = buf;
+
+					break;
+				}
+			}
+
+			vm_area = vm_area->vm_next;
+		}
+	}
+
+	read_unlock(&tasklist_lock);
+
+	return q;
+}
+
+#ifdef CONFIG_SECURITY_NETWORK
+
+#define LOCAL_DECKARD_IPTABLE_PATH "/system/bin/iptables"
+#define LOCAL_DECKARD_IPTABLE_PERMIT_PATH_0 "/system/bin/rild"
+#define LOCAL_DECKARD_IPTABLE_PERMIT_PATH_1 "/system/bin/netd"
+
+static int deckard_socket_setsockopt(struct socket *sock, int level, int optname)
+{
+	if(optname == IPT_SO_SET_REPLACE || optname == IPT_SO_SET_ADD_COUNTERS)
+	{
+		char buff[LOCAL_DECKARD_GUESS_PATH_MAX_LEN + 1];
+
+		memset(buff, 0, LOCAL_DECKARD_GUESS_PATH_MAX_LEN + 1);
+
+		if(deckard_guess_binary(current, buff, LOCAL_DECKARD_GUESS_PATH_MAX_LEN) == NULL)
+		{
+			return -EPERM;
+		}
+
+		if(strlen(buff) != strlen(LOCAL_DECKARD_IPTABLE_PATH))
+		{
+			return -EPERM;
+		}
+
+		if(strcmp(buff, LOCAL_DECKARD_IPTABLE_PATH) != 0)
+		{
+			return -EPERM;
+		}
+
+		if(current->parent == NULL)
+		{
+			return -EPERM;
+		}
+
+		memset(buff, 0, LOCAL_DECKARD_GUESS_PATH_MAX_LEN + 1);
+
+		if(deckard_guess_binary(current->parent, buff, LOCAL_DECKARD_GUESS_PATH_MAX_LEN) == NULL)
+		{
+			return -EPERM;
+		}
+
+		if((strlen(buff) == strlen(LOCAL_DECKARD_IPTABLE_PERMIT_PATH_0)) && (strcmp(buff, LOCAL_DECKARD_IPTABLE_PERMIT_PATH_0) == 0))
+		{
+			return 0;
+		}
+
+		if((strlen(buff) == strlen(LOCAL_DECKARD_IPTABLE_PERMIT_PATH_1)) && (strcmp(buff, LOCAL_DECKARD_IPTABLE_PERMIT_PATH_1) == 0))
+		{
+			return 0;
+		}
+
+		return -EPERM;
+	}
+	else
+	{
+		return 0;
+	}
+}
+#endif /* CONFIG_SECURITY_NETWORK */
+
 static struct security_operations deckard_security_ops = {
 	.ptrace_may_access =	deckard_ptrace_may_access,
 	.ptrace_traceme =	deckard_ptrace_traceme,
@@ -294,6 +452,9 @@ static struct security_operations deckard_security_ops = {
 	.path_link =		deckard_path_link,
 	.path_chroot =		deckard_path_chroot,
 #endif
+#ifdef CONFIG_SECURITY_NETWORK
+	.socket_setsockopt =	deckard_socket_setsockopt,
+#endif /* CONFIG_SECURITY_NETWORK */
 };
 
 static int __init deckard_init (void)

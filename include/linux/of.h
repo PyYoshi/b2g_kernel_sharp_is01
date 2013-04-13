@@ -21,6 +21,8 @@
 
 #include <asm/prom.h>
 
+typedef u32 phandle;
+
 /* flag descriptions */
 #define OF_DYNAMIC	1 /* node and properties were allocated via kmalloc */
 #define OF_DETACHED	2 /* node has been detached from the device tree */

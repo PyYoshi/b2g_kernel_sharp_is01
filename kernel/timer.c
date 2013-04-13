@@ -636,6 +636,74 @@ int __mod_timer(struct timer_list *timer, unsigned long expires)
 
 EXPORT_SYMBOL(__mod_timer);
 
+static inline int
+__mod_timer_pending(struct timer_list *timer, unsigned long expires,
+						bool pending_only, int pinned)
+{
+	struct tvec_base *base, *new_base;
+	unsigned long flags;
+	int ret = 0;
+
+	timer_stats_timer_set_start_info(timer);
+	BUG_ON(!timer->function);
+
+	base = lock_timer_base(timer, &flags);
+
+	if (timer_pending(timer)) {
+		detach_timer(timer, 0);
+		ret = 1;
+	} else {
+		if (pending_only)
+			goto out_unlock;
+	}
+
+	debug_timer_activate(timer);
+
+	new_base = __get_cpu_var(tvec_bases);
+
+	if (base != new_base) {
+		/*
+		 * We are trying to schedule the timer on the local CPU.
+		 * However we can't change timer's base while it is running,
+		 * otherwise del_timer_sync() can't detect that the timer's
+		 * handler yet has not finished. This also guarantees that
+		 * the timer is serialized wrt itself.
+		 */
+		if (likely(base->running_timer != timer)) {
+			/* See the comment in lock_timer_base() */
+			timer_set_base(timer, NULL);
+			spin_unlock(&base->lock);
+			base = new_base;
+			spin_lock(&base->lock);
+			timer_set_base(timer, base);
+		}
+	}
+
+	timer->expires = expires;
+	internal_add_timer(base, timer);
+
+out_unlock:
+	spin_unlock_irqrestore(&base->lock, flags);
+
+	return ret;
+}
+
+/**
+ * mod_timer_pending - modify a pending timer's timeout
+ * @timer: the pending timer to be modified
+ * @expires: new timeout in jiffies
+ *
+ * mod_timer_pending() is the same for pending timers as mod_timer(),
+ * but will not re-activate and modify already deleted timers.
+ *
+ * It is useful for unserialized use of timers.
+ */
+int mod_timer_pending(struct timer_list *timer, unsigned long expires)
+{
+	return __mod_timer_pending(timer, expires, true, TIMER_NOT_PINNED);
+}
+EXPORT_SYMBOL(mod_timer_pending);
+
 /**
  * add_timer_on - start a timer on a particular CPU
  * @timer: the timer to be added

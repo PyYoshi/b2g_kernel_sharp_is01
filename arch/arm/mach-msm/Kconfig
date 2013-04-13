@@ -174,6 +174,20 @@ config MSM_STACKED_MEMORY
 	  memory.  When present this memory bank is used for a high speed
 	  shared memory interface.  When not present regular RAM is used.
 
+config KERNEL_PMEM_SMI_REGION
+	bool "Enable in-kernel PMEM region for SMI"
+	default n
+	depends on ARCH_QSD8X50 && !PMEM_GPU0
+	help
+	   Enable the in-kernel PMEM alloator to use SMI memory.
+
+config PMEM_GPU0
+	bool "Enable PMEM GPU0 region"
+	default y
+	depends on ARCH_QSD8X50 && ANDROID_PMEM
+	help
+	  Enable the PMEM GPU0 device
+
 config MSM_DEBUG_UART
 	int
 	default 1 if MSM_DEBUG_UART1

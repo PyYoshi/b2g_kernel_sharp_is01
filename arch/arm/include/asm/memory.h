@@ -121,6 +121,11 @@
 #define	__phys_to_pfn(paddr)	((paddr) >> PAGE_SHIFT)
 #define	__pfn_to_phys(pfn)	((pfn) << PAGE_SHIFT)
 
+/*
+ * Convert a page to/from a physical address
+ */
+#define phys_to_page(phys)	(pfn_to_page(__phys_to_pfn(phys)))
+
 #ifndef __ASSEMBLY__
 
 /*

@@ -424,6 +424,7 @@ clean_and_invalidate_user_range(unsigned long start, unsigned long end)
 static inline void
 do_cache_op(unsigned long start, unsigned long end, int flags)
 {
+	struct mm_struct *mm = current->active_mm;
 	struct vm_area_struct *vma;
 
 #ifdef CONFIG_ARCH_MSM_ARM11
@@ -441,15 +442,19 @@ do_cache_op(unsigned long start, unsigned long end, int flags)
 	}
 #endif
 
-	vma = find_vma(current->active_mm, start);
+	down_read(&mm->mmap_sem);
+	vma = find_vma(mm, start);
 	if (vma && vma->vm_start < end) {
 		if (start < vma->vm_start)
 			start = vma->vm_start;
 		if (end > vma->vm_end)
 			end = vma->vm_end;
 
-		flush_cache_user_range(vma, start, end);
+		up_read(&mm->mmap_sem);
+		flush_cache_user_range(start, end);
+		return;
 	}
+	up_read(&mm->mmap_sem);
 }
 
 /*

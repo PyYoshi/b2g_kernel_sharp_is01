@@ -1303,39 +1303,6 @@ exit:
 #define bt_power_init(x) do {} while (0)
 #endif
 
-static struct resource kgsl_resources[] = {
-       {
-		.name  = "kgsl_reg_memory",
-		.start = 0xA0000000,
-		.end = 0xA001ffff,
-		.flags = IORESOURCE_MEM,
-       },
-       {
-		.name   = "kgsl_phys_memory",
-		.start = MSM_GPU_PHYS_BASE,
-		.end = MSM_GPU_PHYS_BASE + MSM_GPU_PHYS_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-       },
-       {
-		.start = INT_GRAPHICS,
-		.end = INT_GRAPHICS,
-		.flags = IORESOURCE_IRQ,
-       },
-};
-static struct kgsl_platform_data kgsl_pdata = {
-	.max_axi_freq = 128000, /*Max for 8K*/
-};
-
-static struct platform_device msm_device_kgsl = {
-       .name = "kgsl",
-       .id = -1,
-       .num_resources = ARRAY_SIZE(kgsl_resources),
-       .resource = kgsl_resources,
-	.dev = {
-		.platform_data = &kgsl_pdata,
-	},
-};
-
 static struct platform_device msm_device_pmic_leds = {
 	.name	= "pmic-leds",
 	.id	= -1,
@@ -2135,7 +2102,7 @@ static struct platform_device *devices[] __initdata = {
 	&msm_device_uart3,
 #endif
 	&msm_device_pmic_leds,
-	&msm_device_kgsl,
+	&msm_kgsl_3d0,
 	&hs_device,
 #if defined(CONFIG_TSIF) || defined(CONFIG_TSIF_MODULE)
 	&msm_device_tsif,
@@ -2164,12 +2131,6 @@ static void __init qsd8x50_init_irq(void)
 {
 	msm_init_irq();
 	msm_init_sirc();
-}
-
-static void kgsl_phys_memory_init(void)
-{
-	request_mem_region(kgsl_resources[1].start,
-		resource_size(&kgsl_resources[1]), "kgsl");
 }
 
 static void __init qsd8x50_init_host(void)
@@ -2593,7 +2554,6 @@ static void __init qsd8x50_init(void)
 	spi_register_board_info(msm_spi_board_info,
 				ARRAY_SIZE(msm_spi_board_info));
 	msm_pm_set_platform_data(msm_pm_data);
-	kgsl_phys_memory_init();
 
 #ifdef CONFIG_SURF_FFA_GPIO_KEYPAD
 	if (machine_is_qsd8x50_ffa())

@@ -29,6 +29,7 @@
 #include <linux/mutex.h>
 #include <linux/shmem_fs.h>
 #include <linux/ashmem.h>
+#include <asm/cacheflush.h>
 
 #define ASHMEM_NAME_PREFIX "dev/ashmem/"
 #define ASHMEM_NAME_PREFIX_LEN (sizeof(ASHMEM_NAME_PREFIX) - 1)
@@ -45,6 +46,8 @@ struct ashmem_area {
 	struct list_head unpinned_list;	/* list of all ashmem areas */
 	struct file *file;		/* the shmem-based backing file */
 	size_t size;			/* size of the mapping, in bytes */
+	unsigned long vm_start;		/* Start address of vm_area
+					 * which maps this ashmem */
 	unsigned long prot_mask;	/* allowed prot bits, as vm_flags */
 };
 
@@ -255,6 +258,7 @@ static int ashmem_mmap(struct file *file, struct vm_area_struct *vma)
 		vma->vm_file = asma->file;
 	}
 	vma->vm_flags |= VM_CAN_NONLINEAR;
+	asma->vm_start = vma->vm_start;
 
 out:
 	mutex_unlock(&ashmem_mutex);
@@ -555,6 +559,30 @@ static int ashmem_pin_unpin(struct ashmem_area *asma, unsigned long cmd,
 	return ret;
 }
 
+static int ashmem_cache_op(struct ashmem_area *asma,
+	void (*cache_func)(unsigned long vstart, unsigned long length,
+				unsigned long pstart))
+{
+#ifdef CONFIG_OUTER_CACHE
+	unsigned long vaddr;
+#endif
+	mutex_lock(&ashmem_mutex);
+#ifndef CONFIG_OUTER_CACHE
+	cache_func(asma->vm_start, asma->size, 0);
+#else
+	for (vaddr = asma->vm_start; vaddr < asma->vm_start + asma->size;
+		vaddr += PAGE_SIZE) {
+		unsigned long physaddr;
+		physaddr = virtaddr_to_physaddr(vaddr);
+		if (!physaddr)
+			return -EINVAL;
+		cache_func(vaddr, PAGE_SIZE, physaddr);
+	}
+#endif
+	mutex_unlock(&ashmem_mutex);
+	return 0;
+}
+
 static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct ashmem_area *asma = file->private_data;
@@ -595,10 +623,72 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			ashmem_shrink(ret, GFP_KERNEL);
 		}
 		break;
+	case ASHMEM_CACHE_FLUSH_RANGE:
+		ret = ashmem_cache_op(asma, &clean_and_invalidate_caches);
+		break;
+	case ASHMEM_CACHE_CLEAN_RANGE:
+		ret = ashmem_cache_op(asma, &clean_caches);
+		break;
+	case ASHMEM_CACHE_INV_RANGE:
+		ret = ashmem_cache_op(asma, &invalidate_caches);
+		break;
 	}
 
 	return ret;
 }
+
+static int is_ashmem_file(struct file *file)
+{
+	char fname[256], *name;
+	name = dentry_path(file->f_dentry, fname, 256);
+	return strcmp(name, "/ashmem") ? 0 : 1;
+}
+
+int get_ashmem_file(int fd, struct file **filp, struct file **vm_file,
+			unsigned long *len)
+{
+	int ret = -1;
+	struct file *file = fget(fd);
+	*filp = NULL;
+	*vm_file = NULL;
+	if (unlikely(file == NULL)) {
+		pr_err("ashmem: %s: requested data from file "
+			"descriptor that doesn't exist.\n", __func__);
+	} else {
+		char currtask_name[FIELD_SIZEOF(struct task_struct, comm) + 1];
+		pr_debug("filp %p rdev %d pid %u(%s) file %p(%ld)"
+			" dev id: %d\n", filp,
+			file->f_dentry->d_inode->i_rdev,
+			current->pid, get_task_comm(currtask_name, current),
+			file, file_count(file),
+			MINOR(file->f_dentry->d_inode->i_rdev));
+		if (is_ashmem_file(file)) {
+			struct ashmem_area *asma = file->private_data;
+			*filp = file;
+			*vm_file = asma->file;
+			*len = asma->size;
+			ret = 0;
+		} else {
+			pr_err("file descriptor is not an ashmem "
+				"region fd: %d\n", fd);
+			fput(file);
+		}
+	}
+	return ret;
+}
+EXPORT_SYMBOL(get_ashmem_file);
+
+void put_ashmem_file(struct file *file)
+{
+	char currtask_name[FIELD_SIZEOF(struct task_struct, comm) + 1];
+	pr_debug("rdev %d pid %u(%s) file %p(%ld)" " dev id: %d\n",
+		file->f_dentry->d_inode->i_rdev, current->pid,
+		get_task_comm(currtask_name, current), file,
+		file_count(file), MINOR(file->f_dentry->d_inode->i_rdev));
+	if (file && is_ashmem_file(file))
+		fput(file);
+}
+EXPORT_SYMBOL(put_ashmem_file);
 
 static struct file_operations ashmem_fops = {
 	.owner = THIS_MODULE,

@@ -88,6 +88,9 @@ extern void add_timer_on(struct timer_list *timer, int cpu);
 extern int del_timer(struct timer_list * timer);
 extern int __mod_timer(struct timer_list *timer, unsigned long expires);
 extern int mod_timer(struct timer_list *timer, unsigned long expires);
+extern int mod_timer_pending(struct timer_list *timer, unsigned long expires);
+
+#define TIMER_NOT_PINNED	0
 
 /*
  * The jiffies value which is added to now, when there is no timer

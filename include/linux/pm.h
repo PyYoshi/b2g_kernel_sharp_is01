@@ -278,6 +278,36 @@ struct dev_pm_ops {
 					{ .event = PM_EVENT_AUTO_RESUME, })
 
 /**
+ * Device run-time power management status.
+ *
+ * These status labels are used internally by the PM core to indicate the
+ * current status of a device with respect to the PM core operations.  They do
+ * not reflect the actual power state of the device or its status as seen by the
+ * driver.
+ *
+ * RPM_ACTIVE		Device is fully operational.  Indicates that the device
+ *			bus type's ->runtime_resume() callback has completed
+ *			successfully.
+ *
+ * RPM_SUSPENDED	Device bus type's ->runtime_suspend() callback has
+ *			completed successfully.  The device is regarded as
+ *			suspended.
+ *
+ * RPM_RESUMING		Device bus type's ->runtime_resume() callback is being
+ *			executed.
+ *
+ * RPM_SUSPENDING	Device bus type's ->runtime_suspend() callback is being
+ *			executed.
+ */
+
+enum rpm_status {
+	RPM_ACTIVE = 0,
+	RPM_RESUMING,
+	RPM_SUSPENDED,
+	RPM_SUSPENDING,
+};
+
+/**
  * Device power management states
  *
  * These state labels are used internally by the PM core to indicate the current

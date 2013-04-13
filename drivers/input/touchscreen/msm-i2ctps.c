@@ -83,6 +83,9 @@ typedef enum
 #define	TPS_ERROR_WIDE		SH_TOUCH_MAX_DISTANCE	/* Wide range */
 #define	TPS_ERROR_3DOWN		SH_TOUCH_MAX_DISTANCE	/* Three point pushing */
 
+#define SH_TOUCH_DELTA		16
+#define SH_TOUCH_MAX_PRESSURE	255
+
 /* Adjustable parameter */
 #define	POS_X0				0
 #define	POS_X1				120
@@ -169,9 +172,10 @@ typedef struct
 {
 	uint8_t mbValid;;
 												/* Event processing function */
-	void (*mpReportKey)(InputDev *);
-	void (*mpReportWit)(InputDev *, uint16_t, uint16_t);
-	void (*mpReportPos)(InputDev *, uint16_t, uint16_t);
+	void (*mpReportKey)(InputDev *, int mt);
+	void (*mpReportKey2)(InputDev *, int mt);
+	void (*mpReportPos)(InputDev *, uint16_t, uint16_t, uint16_t, int mt);
+	void (*mpReportPos2)(InputDev *, uint16_t, uint16_t, uint16_t, int mt);
 } TpsDispatch;
 
 
@@ -213,6 +217,9 @@ static TpsPoint_t gAdjustPrm[ADJUST_POINT];
 static uint8_t gSense[168];
 
 static int gnResult = 0;
+
+static uint16_t oldPosX, oldPosY;
+static int oldDeltaX, oldDeltaY, oldState;
 
 /*+-------------------------------------------------------------------------+*/
 /*|	PROTO TYPE DECLARE														|*/
@@ -263,14 +270,14 @@ static void ShTps_Qsort(Qsort_t *pTable, int nTop, int nEnd);
 static void ShTps_RoundValue(short *pValue);
 static int ShTps_SetAdjustParam(I2cTpsRec *poTpsRec, uint16_t *pParam);
 static void ShTps_AdjustPt(short *pX, short *pY);
-static void ShTps_KeyOn(InputDev *pInDev);
-static void ShTps_KeyOff(InputDev *pInDev);
-static void ShTps_WidOff(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY);
-static void ShTps_WidSet(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY);
-static void ShTps_WidWid(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY);
-static void ShTps_Wid3Dn(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY);
-static void ShTps_PosSet(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY);
-static void ShTps_PosErr(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY);
+static void ShTps_KeyOn(InputDev *pInDev, int mt);
+static void ShTps_KeyOff(InputDev *pInDev, int mt);
+static void ShTps_PosSet(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt);
+static void ShTps_PosSet2(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt);
+static void ShTps_PosOff(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt);
+static void ShTps_PosOff2(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt);
+static void ShTps_PosErr(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt);
+static void ShTps_PosErr2(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt);
 static int ShTps_FwWrite(I2cTpsRec *poTpsRec, TpsFwData *pTpsFirmData);
 static int ShTps_FwWriteMain(TpsFwData *pTpsFirmData);
 
@@ -289,43 +296,43 @@ static const TpsDispatch gTpsDispatch[TPS_STATE_MAX][TPS_STATE_MAX] =
 {
 	/* [EVENT] HOVER */
 	{
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] HOVER */
-		{	1,	ShTps_KeyOff,	NULL,			NULL,			},	/* [STATE] SDOWN */
-		{	1,	ShTps_KeyOff,	ShTps_WidOff,	NULL,			},	/* [STATE] MDOWN */
-		{	1,	ShTps_KeyOff,	ShTps_WidOff,	NULL,			},	/* [STATE] WIDE */
-		{	1,	ShTps_KeyOff,	ShTps_WidOff,	NULL,			},	/* [STATE] 3DOWN */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] HOVER */
+		{	1,	ShTps_KeyOff,	NULL,		ShTps_PosOff,	NULL,		},	/* [STATE] SDOWN */
+		{	1,	ShTps_KeyOff,	ShTps_KeyOff,	ShTps_PosOff,	ShTps_PosOff2,	},	/* [STATE] MDOWN */
+		{	1,	ShTps_KeyOff,	ShTps_KeyOff,	ShTps_PosOff,	ShTps_PosOff2,	},	/* [STATE] WIDE */
+		{	1,	ShTps_KeyOff,	ShTps_KeyOff,	ShTps_PosOff,	ShTps_PosOff2,	},	/* [STATE] 3DOWN */
 	},
 	/* [EVENT] SDOWN */
 	{
-		{	1,	ShTps_KeyOn,	NULL,			ShTps_PosSet,	},	/* [STATE] HOVER */
-		{	1,	NULL,			NULL,			ShTps_PosSet,	},	/* [STATE] SDOWN */
-		{	1,	NULL,			ShTps_WidOff,	ShTps_PosSet,	},	/* [STATE] MDOWN */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] WIDE */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] 3DOWN */
+		{	1,	ShTps_KeyOn,	NULL,		ShTps_PosSet,	NULL,		},	/* [STATE] HOVER */
+		{	1,	NULL,		NULL,		ShTps_PosSet,	NULL,		},	/* [STATE] SDOWN */
+		{	1,	NULL,		ShTps_KeyOff,	ShTps_PosSet,	ShTps_PosOff2,	},	/* [STATE] MDOWN */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] WIDE */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] 3DOWN */
 	},
 	/* [EVENT] MDOWN */
 	{
-		{	1,	ShTps_KeyOn,	ShTps_WidSet,	ShTps_PosSet,	},	/* [STATE] HOVER */
-		{	1,	NULL,			ShTps_WidSet,	ShTps_PosSet,	},	/* [STATE] SDOWN */
-		{	1,	NULL,			ShTps_WidSet,	ShTps_PosSet,	},	/* [STATE] MDOWN */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] WIDE */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] 3DOWN */
+		{	1,	ShTps_KeyOn,	ShTps_KeyOn,	ShTps_PosSet,	ShTps_PosSet2,	},	/* [STATE] HOVER */
+		{	1,	NULL,		ShTps_KeyOn,	ShTps_PosSet,	ShTps_PosSet2,	},	/* [STATE] SDOWN */
+		{	1,	NULL,		NULL,		ShTps_PosSet,	ShTps_PosSet2,	},	/* [STATE] MDOWN */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] WIDE */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] 3DOWN */
 	},
 	/* [EVENT] WIDE */
 	{
-		{	1,	ShTps_KeyOn,	ShTps_WidWid,	ShTps_PosErr,	},	/* [STATE] HOVER */
-		{	1,	NULL,			ShTps_WidWid,	ShTps_PosErr,	},	/* [STATE] SDOWN */
-		{	1,	NULL,			ShTps_WidWid,	ShTps_PosErr,	},	/* [STATE] MDOWN */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] WIDE */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] 3DOWN */
+		{	1,	ShTps_KeyOn,	ShTps_KeyOn,	ShTps_PosErr,	ShTps_PosErr2,	},	/* [STATE] HOVER */
+		{	1,	NULL,		ShTps_KeyOn,	ShTps_PosErr,	ShTps_PosErr2,	},	/* [STATE] SDOWN */
+		{	1,	NULL,		NULL,		ShTps_PosErr,	ShTps_PosErr2,	},	/* [STATE] MDOWN */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] WIDE */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] 3DOWN */
 	},
 	/* [EVENT] 3DOWN */
 	{
-		{	1,	ShTps_KeyOn,	ShTps_Wid3Dn,	ShTps_PosErr,	},	/* [STATE] HOVER */
-		{	1,	NULL,			ShTps_Wid3Dn,	ShTps_PosErr,	},	/* [STATE] SDOWN */
-		{	1,	NULL,			ShTps_Wid3Dn,	ShTps_PosErr,	},	/* [STATE] MDOWN */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] WIDE */
-		{	0,	NULL,			NULL,			NULL,			},	/* [STATE] 3DOWN */
+		{	1,	ShTps_KeyOn,	ShTps_KeyOn,	ShTps_PosErr,	ShTps_PosErr2,	},	/* [STATE] HOVER */
+		{	1,	NULL,		ShTps_KeyOn,	ShTps_PosErr,	ShTps_PosErr2,	},	/* [STATE] SDOWN */
+		{	1,	NULL,		NULL,		ShTps_PosErr,	ShTps_PosErr2,	},	/* [STATE] MDOWN */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] WIDE */
+		{	0,	NULL,		NULL,		NULL,		NULL,		},	/* [STATE] 3DOWN */
 	},
 };
 
@@ -792,11 +799,18 @@ printk(KERN_DEBUG "[ShTps]CreateInputDev(PID:%ld)\n", sys_getpid());
 		__set_bit(ABS_Y, pInDev->absbit);
 		__set_bit(ABS_TOOL_WIDTH, pInDev->absbit);
 		__set_bit(BTN_TOUCH, pInDev->keybit);
+		__set_bit(ABS_MT_POSITION_X, pInDev->absbit);
+		__set_bit(ABS_MT_POSITION_Y, pInDev->absbit);
+		__set_bit(ABS_MT_TOUCH_MAJOR, pInDev->absbit);
+		__set_bit(BTN_2, pInDev->keybit);
 		input_set_drvdata(pInDev, poTpsRec);
 		/* Event parameter range set */
 		input_set_abs_params(pInDev, ABS_X, 0, SH_TOUCH_MAX_X, 0, 0);
 		input_set_abs_params(pInDev, ABS_Y, 0, SH_TOUCH_MAX_Y, 0, 0);
 		input_set_abs_params(pInDev, ABS_TOOL_WIDTH, 0, SH_TOUCH_MAX_DISTANCE, 0, 0);
+		input_set_abs_params(pInDev, ABS_MT_POSITION_X, 0, SH_TOUCH_MAX_X, 0, 0);
+		input_set_abs_params(pInDev, ABS_MT_POSITION_Y, 0, SH_TOUCH_MAX_Y, 0, 0);
+		input_set_abs_params(pInDev, ABS_MT_TOUCH_MAJOR, 0, SH_TOUCH_MAX_PRESSURE, 0, 0);
 	}
 	else
 	{
@@ -989,6 +1003,7 @@ static void ShTps_FetchInt(WorkStruct *poWork)
 	uint8_t bData[7];
 	uint16_t wPosX, wPosY;
 	uint16_t wDeltaX, wDeltaY;
+	uint16_t wDistance;
 	int nNextState;
 #ifdef TPS_PRNDEB
 	const char *StaName[] = { "HOVER ", "SDOWN ", "MDOWN ", "WIDE  ", "3DOWN "};
@@ -1027,6 +1042,7 @@ printk(KERN_DEBUG "[ShTps]i2c read error\n");
 	wPosY   = (uint16_t)bData[3] + ((uint16_t)(bData[2] & 0x0f) << 8);
 	wDeltaX = (uint16_t)bData[4] + ((uint16_t)(bData[5] & 0xf0) << 4);
 	wDeltaY = (uint16_t)bData[6] + ((uint16_t)(bData[5] & 0x0f) << 8);
+	wDistance = 0;
 
 #ifdef TPS_PRNLOG
 printk(KERN_DEBUG "[ShTps]Int %02X,(%4d,%4d)(%4d,%4d)\n", bData[ 0], wPosX, wPosY, wDeltaX, wDeltaY);
@@ -1048,6 +1064,76 @@ printk(KERN_DEBUG "[ShTps]Int %02X,(%4d,%4d)(%4d,%4d)\n", bData[ 0], wPosX, wPos
 		}
 		else
 		{
+			if(nNextState == TPS_STATE_MDOWN)
+			{
+				wDistance = ShTps_GetHypotLength(wDeltaX, wDeltaY);
+
+				if(wPosX - oldPosX > SH_TOUCH_DELTA ||
+				   (oldPosX - wPosX <= SH_TOUCH_DELTA && oldDeltaX < 0))
+				{
+					wPosX -= wDeltaX / 2;
+					wDeltaX = wPosX + wDeltaX;
+				}
+				else
+				{
+					wPosX += wDeltaX / 2;
+					wDeltaX = wPosX - wDeltaX;
+				}
+				if(wPosY - oldPosY > SH_TOUCH_DELTA ||
+				   (oldPosY - wPosY <= SH_TOUCH_DELTA && oldDeltaY < 0))
+				{
+					wPosY -= wDeltaY / 2;
+					wDeltaY = wPosY + wDeltaY;
+				}
+				else
+				{
+					wPosY += wDeltaY / 2;
+					wDeltaY = wPosY - wDeltaY;
+				}
+
+				if(wDeltaX > SH_TOUCH_MAX_X)
+				{
+					wDeltaX = SH_TOUCH_MAX_X;
+				}
+#ifdef TPS_ROTATE_180
+				wDeltaX   = SH_TOUCH_MAX_X - wDeltaX;
+#endif	/* TPS_ROTATE_180 */
+				if(wDeltaY > SH_TOUCH_MAX_Y)
+				{
+					wDeltaY = SH_TOUCH_MAX_Y;
+				}
+#ifdef TPS_ROTATE_180
+				wDeltaY   = SH_TOUCH_MAX_Y - wDeltaY;
+#endif	/* TPS_ROTATE_180 */
+				/* The correction is effective */
+				if(poTpsRec->mbAdjustEnable != 0)
+				{
+					/* Coordinates are corrected.  */
+					ShTps_AdjustPt(&wDeltaX, &wDeltaY);
+#ifdef TPS_PRNDEB
+printk(KERN_DEBUG "[ShTps]Adjust (%4d,%4d)\n", wDeltaX, wDeltaY);
+#endif	/* TPS_PRNDEB */
+				}
+			}
+
+			oldDeltaX = wPosX - oldPosX;
+			oldDeltaY = wPosY - oldPosY;
+			oldPosX = wPosX;
+			oldPosY = wPosY;
+			if(nNextState == TPS_STATE_SDOWN)
+			{
+				if(oldState == 2)
+				{
+					oldState = 1;
+					goto skip;
+				}
+				oldState = oldState + 1;
+			}
+			else
+			{
+				oldState = 0;
+			}
+
 			if(wPosX > SH_TOUCH_MAX_X)
 			{
 				wPosX = SH_TOUCH_MAX_X;
@@ -1073,23 +1159,33 @@ printk(KERN_DEBUG "[ShTps]Adjust (%4d,%4d)\n", wPosX, wPosY);
 			}
 		}
 	}
+	else
+	{
+		oldState = 0;
+	}
 	/* Can it change? */
 	if(gTpsDispatch[nNextState][poTpsRec->mnState].mbValid != 0)
 	{
-		/* Report[BTN_TOUCH] */
+		int mt;
+
 		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey != NULL)
 		{
-			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey(pInDev);
+			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey(pInDev, 0);
 		}
-		/* Report[ABS_TOOL_WIDTH] */
-		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportWit != NULL)
+		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey2 != NULL)
 		{
-			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportWit(pInDev, wDeltaX, wDeltaY);
+			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportKey2(pInDev, 1);
 		}
-		/* Report[ABS_X][ABS_Y] */
-		if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos != NULL)
+		for (mt = 0; mt < 2; mt++)
 		{
-			gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos(pInDev, wPosX, wPosY);
+			if(gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos != NULL)
+			{
+				gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos(pInDev, wPosX, wPosY, wDistance, mt);
+			}
+			if(mt && gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos2 != NULL)
+			{
+				gTpsDispatch[nNextState][poTpsRec->mnState].mpReportPos2(pInDev, wDeltaX, wDeltaY, wDistance, mt);
+			}
 		}
 		input_sync(pInDev);
 #ifdef TPS_PRNDEB
@@ -1103,6 +1199,7 @@ printk(KERN_DEBUG "[ShTps]State[%s]->[%s] OK\n", StaName[poTpsRec->mnState], Sta
 printk(KERN_DEBUG "[ShTps]State[%s]->[%s] NG\n", StaName[poTpsRec->mnState], StaName[nNextState]);
 #endif	/* TPS_PRNDEB */
 	}
+skip:
 	/* Enabling interrupt */
 	enable_irq(MSM_GPIO_TO_INT(poTpsRec->mnIrqPin));
 	mutex_unlock(&goTpsAccessMutex);
@@ -1147,6 +1244,11 @@ static uint16_t ShTps_GetHypotLength(uint16_t wX, uint16_t wY)
 {
 	uint16_t wResult;
 	uint32_t dwX, dwY;
+
+	if(wX > SH_TOUCH_MAX_X)
+		wX = SH_TOUCH_MAX_X;
+	if(wY > SH_TOUCH_MAX_Y)
+		wY = SH_TOUCH_MAX_Y;
 
 	if(wX == 0)
 		return wY;
@@ -1350,15 +1452,26 @@ printk(KERN_DEBUG "[ShTps]Disable OFF\n");
 			/* It returns it to the state of HOVER */
 			if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mbValid != 0)
 			{
-				/* Report[BTN_TOUCH] */
+				int mt;
+
 				if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey != NULL)
 				{
-					gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey(poTpsRec->mpoInDev);
+					gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey(poTpsRec->mpoInDev, 0);
 				}
-				/* Report[ABS_TOOL_WIDTH] */
-				if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportWit != NULL)
+				if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey2 != NULL)
 				{
-					gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportWit(poTpsRec->mpoInDev, 0, 0);
+					gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportKey2(poTpsRec->mpoInDev, 1);
+				}
+				for (mt = 0; mt < 2; mt++)
+				{
+					if(gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportPos != NULL)
+					{
+						gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportPos(poTpsRec->mpoInDev, 0, 0, 0, mt);
+					}
+					if(mt && gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportPos2 != NULL)
+					{
+						gTpsDispatch[TPS_STATE_HOVER][poTpsRec->mnState].mpReportPos2(poTpsRec->mpoInDev, 0, 0, 0, mt);
+					}
 				}
 				input_sync(poTpsRec->mpoInDev);
 			}
@@ -1693,79 +1806,113 @@ static void ShTps_AdjustPt(short *pX, short *pY)
 	*pY = MINMAX(0, SH_TOUCH_MAX_Y, *pY);
 }
 
-static void ShTps_KeyOn(InputDev *pInDev)
+static void ShTps_KeyOn(InputDev *pInDev, int mt)
 {
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]KeyOn\n");
 #endif	/* TPS_PRNDEB */
-	/* Touching down */
-	input_report_key(pInDev, BTN_TOUCH, KPD_KEYPRESS);
+	if (mt)
+		input_report_key(pInDev, BTN_2, KPD_KEYPRESS);
+	else
+		input_report_key(pInDev, BTN_TOUCH, KPD_KEYPRESS);
 }
-static void ShTps_KeyOff(InputDev *pInDev)
+static void ShTps_KeyOff(InputDev *pInDev, int mt)
 {
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]KeyOff\n");
 #endif	/* Touching up */
-	/* Touching up */
-	input_report_key(pInDev, BTN_TOUCH, KPD_KEYRELEASE);
+	if (mt)
+		input_report_key(pInDev, BTN_2, KPD_KEYRELEASE);
+	else
+		input_report_key(pInDev, BTN_TOUCH, KPD_KEYRELEASE);
 }
-static void ShTps_WidOff(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
-{
-#ifdef TPS_PRNDEB
-printk(KERN_DEBUG "[ShTps]WidOff(0)\n");
-#endif	/* TPS_PRNDEB */
-	/* ABS_TOOL_WIDTH Reset */
-	input_report_abs(pInDev, ABS_TOOL_WIDTH, 0);
-}
-static void ShTps_WidSet(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
-{
-	uint16_t wDistance;
-
-	/** Maximum size excess */
-	if(wDeltaX > SH_TOUCH_MAX_X) {
-		wDeltaX = SH_TOUCH_MAX_X;
-	} if(wDeltaY > SH_TOUCH_MAX_Y) {
-		wDeltaY = SH_TOUCH_MAX_Y;
-	}
-	wDistance = ShTps_GetHypotLength(wDeltaX, wDeltaY);
-#ifdef TPS_PRNDEB
-printk(KERN_DEBUG "[ShTps]WidSet(%d)\n", wDistance);
-#endif	/* TPS_PRNDEB */
-	input_report_abs(pInDev, ABS_TOOL_WIDTH, wDistance);
-}
-static void ShTps_WidWid(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
-{
-#ifdef TPS_PRNDEB
-printk(KERN_DEBUG "[ShTps]WidWid(%d)\n", TPS_ERROR_WIDE);
-#endif	/* TPS_PRNDEB */
-	/* error report */
-	input_report_abs(pInDev, ABS_TOOL_WIDTH, TPS_ERROR_WIDE);
-}
-static void ShTps_Wid3Dn(InputDev *pInDev, uint16_t wDeltaX, uint16_t wDeltaY)
-{
-#ifdef TPS_PRNDEB
-printk(KERN_DEBUG "[ShTps]Wid3Dn(%d)\n", TPS_ERROR_3DOWN);
-#endif	/* TPS_PRNDEB */
-	/* error report */
-	input_report_abs(pInDev, ABS_TOOL_WIDTH, TPS_ERROR_3DOWN);
-}
-static void ShTps_PosSet(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY)
+static void ShTps_PosSet(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt)
 {
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]PosSet(%d,%d)\n", wPosX, wPosY);
 #endif	/* TPS_PRNDEB */
+	if (mt)
+	{
+		input_report_abs(pInDev, ABS_MT_POSITION_X, wPosX);
+		input_report_abs(pInDev, ABS_MT_POSITION_Y, wPosY);
+		input_report_abs(pInDev, ABS_MT_TOUCH_MAJOR, SH_TOUCH_MAX_PRESSURE);
+		input_mt_sync(pInDev);
+		return;
+	}
+
 	/* Coordinates set */
 	input_report_abs(pInDev, ABS_X, wPosX);
 	input_report_abs(pInDev, ABS_Y, wPosY);
 }
-static void ShTps_PosErr(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY)
+static void ShTps_PosSet2(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt)
+{
+	if (mt)
+	{
+		ShTps_PosSet(pInDev, wPosX, wPosY, wDistance, mt);
+		return;
+	}
+
+#ifdef TPS_PRNDEB
+printk(KERN_DEBUG "[ShTps]WidSet(%d)\n", wDistance);
+#endif	/* TPS_PRNDEB */
+
+	input_report_abs(pInDev, ABS_TOOL_WIDTH, wDistance);
+}
+static void ShTps_PosOff(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt)
+{
+#ifdef TPS_PRNDEB
+printk(KERN_DEBUG "[ShTps]PosOff(0)\n");
+#endif	/* TPS_PRNDEB */
+	if (mt)
+	{
+		input_report_abs(pInDev, ABS_MT_TOUCH_MAJOR, 0);
+		input_mt_sync(pInDev);
+		return;
+	}
+}
+static void ShTps_PosOff2(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt)
+{
+#ifdef TPS_PRNDEB
+printk(KERN_DEBUG "[ShTps]PosOff(0)\n");
+#endif	/* TPS_PRNDEB */
+	if (mt)
+	{
+		ShTps_PosOff(pInDev, wPosX, wPosY, wDistance, mt);
+		return;
+	}
+
+	input_report_abs(pInDev, ABS_TOOL_WIDTH, 0);
+}
+static void ShTps_PosErr(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt)
 {
 #ifdef TPS_PRNDEB
 printk(KERN_DEBUG "[ShTps]PosErr(%d,%d)\n", TPS_ERROR_POS_X, TPS_ERROR_POS_Y);
 #endif	/* TPS_PRNDEB */
+	if (mt)
+	{
+		input_report_abs(pInDev, ABS_MT_POSITION_X, TPS_ERROR_POS_X);
+		input_report_abs(pInDev, ABS_MT_POSITION_Y, TPS_ERROR_POS_Y);
+		input_report_abs(pInDev, ABS_MT_TOUCH_MAJOR, SH_TOUCH_MAX_PRESSURE);
+		input_mt_sync(pInDev);
+		return;
+	}
+
 	/* error report */
 	input_report_abs(pInDev, ABS_X, TPS_ERROR_POS_X);
 	input_report_abs(pInDev, ABS_Y, TPS_ERROR_POS_Y);
+}
+static void ShTps_PosErr2(InputDev *pInDev, uint16_t wPosX, uint16_t wPosY, uint16_t wDistance, int mt)
+{
+#ifdef TPS_PRNDEB
+printk(KERN_DEBUG "[ShTps]PosErr(%d,%d)\n", TPS_ERROR_POS_X, TPS_ERROR_POS_Y);
+#endif	/* TPS_PRNDEB */
+	if (mt)
+	{
+		ShTps_PosErr(pInDev, wPosX, wPosY, wDistance, mt);
+		return;
+	}
+
+	input_report_abs(pInDev, ABS_TOOL_WIDTH, TPS_ERROR_WIDE);
 }
 
 /*+-----------------------------------------------------------------------------+*/
